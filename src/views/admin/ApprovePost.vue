@@ -79,7 +79,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { User, Calendar, CheckCircle, XCircle, FileText } from 'lucide-vue-next'
-import { articles } from '@/app/lib/mock-data'
+import { articles } from '@/lib/mock-data'
 
 const pendingPosts = ref(articles.slice(0, 5).map(a => ({ ...a, status: 'pending' })))
 const selectedPostId = ref(pendingPosts.value[0]?.id ?? null)

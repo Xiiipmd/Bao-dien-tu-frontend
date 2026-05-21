@@ -64,7 +64,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Search as SearchIcon, Filter, SearchX } from 'lucide-vue-next'
-import { articles, categories } from '@/app/lib/mock-data'
+import { articles, categories } from '@/lib/mock-data'
 import ArticleCard from '@/components/ArticleCard.vue'
 
 const route = useRoute()

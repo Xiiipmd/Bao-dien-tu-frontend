@@ -103,7 +103,7 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 import { Upload, Save, Send } from 'lucide-vue-next'
-import { categories } from '@/app/lib/mock-data'
+import { categories } from '@/lib/mock-data'
 
 const form = reactive({
   title: '',

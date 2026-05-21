@@ -133,7 +133,7 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { Calendar, User, Crown, Download, Sparkles, MessageSquare, Send } from 'lucide-vue-next'
-import { articles, comments as initialComments, authors } from '@/app/lib/mock-data'
+import { articles, comments as initialComments, authors } from '@/lib/mock-data'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()

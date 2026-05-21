@@ -94,7 +94,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ArrowRight, ChevronRight, TrendingUp } from 'lucide-vue-next'
-import { articles, categories } from '@/app/lib/mock-data'
+import { articles, categories } from '@/lib/mock-data'
 import ArticleCard from '@/components/ArticleCard.vue'
 
 const featuredArticle = computed(() => articles[0])

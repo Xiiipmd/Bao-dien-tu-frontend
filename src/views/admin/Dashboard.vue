@@ -83,7 +83,7 @@ import {
   Legend,
 } from 'chart.js'
 import { FileText, Eye, DollarSign, TrendingUp } from 'lucide-vue-next'
-import { dashboardStats, articles } from '@/app/lib/mock-data'
+import { dashboardStats, articles } from '@/lib/mock-data'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend)
 

@@ -75,7 +75,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { UserPlus, Users, Calendar, Mail } from 'lucide-vue-next'
-import { authors, articles } from '@/app/lib/mock-data'
+import { authors, articles } from '@/lib/mock-data'
 import ArticleCard from '@/components/ArticleCard.vue'
 
 const route = useRoute()
