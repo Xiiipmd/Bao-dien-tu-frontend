@@ -26,8 +26,13 @@
               <span>{{ article.date }}</span>
             </div>
             <div class="ml-auto flex items-center gap-3">
-              <button class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                <Sparkles class="h-4 w-4 text-purple-500" /> Tóm tắt AI
+              <button
+                :disabled="summaryLoading"
+                @click="toggleSummary"
+                class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
+              >
+                <Sparkles class="h-4 w-4 text-purple-500" />
+                {{ summaryLoading ? 'Đang tải...' : (isSummaryOpen ? 'Thu gọn tóm tắt' : 'Tóm tắt AI') }}
               </button>
               <button class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                 <Download class="h-4 w-4" /> Tải PDF
@@ -35,6 +40,20 @@
             </div>
           </div>
         </header>
+
+        <div class="mb-8">
+          <div v-if="nonVipNotice" class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            {{ nonVipNotice }}
+          </div>
+          <div v-if="isSummaryOpen" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <Sparkles class="h-4 w-4 text-purple-500" /> Tóm tắt AI
+            </div>
+            <div v-if="summaryLoading" class="text-sm text-gray-500">Đang tạo tóm tắt...</div>
+            <div v-else-if="summaryError" class="text-sm text-red-600">{{ summaryError }}</div>
+            <p v-else class="text-sm leading-6 text-gray-700 whitespace-pre-line">{{ summaryContent }}</p>
+          </div>
+        </div>
 
         <div class="mb-10 aspect-video w-full overflow-hidden rounded-xl bg-gray-100">
           <img :src="article.image" :alt="article.title" class="h-full w-full object-cover" />
@@ -130,11 +149,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Calendar, User, Crown, Download, Sparkles, MessageSquare, Send } from 'lucide-vue-next'
 import { articles, comments as initialComments, authors } from '@/lib/mock-data'
 import { useAuthStore } from '@/stores/auth'
+import api from '@/api'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -144,10 +164,65 @@ const article = computed(() => articles.find(a => a.id === id.value) ?? articles
 const author = computed(() => authors.find(a => a.id === article.value.authorId))
 const relatedArticles = computed(() => articles.filter(a => a.id !== id.value).slice(0, 4))
 const showVipOverlay = computed(() => article.value.isVip && !auth.isVip)
+const articleIdNumber = computed(() => Number(id.value))
+const canFetchSummary = computed(() => Number.isFinite(articleIdNumber.value) && articleIdNumber.value > 0)
 
 const commentText = ref('')
 const commentError = ref('')
 const comments = ref([...initialComments])
+
+const isSummaryOpen = ref(false)
+const summaryContent = ref('')
+const summaryError = ref('')
+const summaryLoading = ref(false)
+const nonVipNotice = ref('')
+
+watch(id, () => {
+  isSummaryOpen.value = false
+  summaryContent.value = ''
+  summaryError.value = ''
+  summaryLoading.value = false
+  nonVipNotice.value = ''
+})
+
+async function toggleSummary() {
+  if (!auth.isVip) {
+    nonVipNotice.value = 'Bạn phải đăng ký gói VIP để sử dụng chức năng này'
+    isSummaryOpen.value = false
+    return
+  }
+
+  nonVipNotice.value = ''
+  isSummaryOpen.value = !isSummaryOpen.value
+  if (isSummaryOpen.value && !summaryContent.value && !summaryLoading.value) {
+    await fetchSummary()
+  }
+}
+
+async function fetchSummary() {
+  if (!canFetchSummary.value) {
+    summaryError.value = 'Không thể tải tóm tắt cho bài viết này.'
+    return
+  }
+  summaryLoading.value = true
+  summaryError.value = ''
+  try {
+    const res = await api.get('/api/articles/summary', { params: { articleId: articleIdNumber.value } })
+    summaryContent.value = res.data?.content ?? ''
+    if (!summaryContent.value) {
+      summaryError.value = 'Chưa có tóm tắt cho bài viết này.'
+    }
+  } catch (err: any) {
+    const status = err?.response?.status
+    if (status === 403) {
+      summaryError.value = 'Bạn phải đăng ký gói VIP để sử dụng chức năng này'
+    } else {
+      summaryError.value = err?.response?.data?.message ?? 'Không thể tải tóm tắt AI. Vui lòng thử lại.'
+    }
+  } finally {
+    summaryLoading.value = false
+  }
+}
 
 function handleCommentSubmit() {
   if (commentText.value.trim().length < 5) {
