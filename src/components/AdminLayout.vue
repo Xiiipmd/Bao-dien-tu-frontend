@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-screen w-full bg-gray-50">
     <!-- Sidebar -->
-    <aside class="w-64 flex-shrink-0 flex flex-col bg-slate-900 text-white">
+    <aside class="w-64 shrink-0 flex flex-col bg-slate-900 text-white">
       <div class="flex h-16 items-center px-6 border-b border-slate-800">
         <RouterLink to="/" class="flex items-center gap-2 text-white">
           <div class="flex h-8 w-8 items-center justify-center rounded bg-blue-600 font-bold text-xl">N</div>
@@ -45,7 +45,7 @@
               class="h-9 rounded-full bg-gray-100 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-100 focus:bg-white border border-transparent focus:border-blue-200"
             />
           </div>
-          <div class="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 cursor-pointer" />
+          <div class="h-8 w-8 cursor-pointer rounded-full bg-linear-to-r from-blue-500 to-indigo-500" />
         </div>
       </header>
 
@@ -61,7 +61,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { LayoutDashboard, FileText, CheckSquare, Crown, LogOut, Search } from 'lucide-vue-next'
+import { LayoutDashboard, FileText, CheckSquare, Crown, LogOut, Search, TrendingUp } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -73,7 +73,9 @@ const navItems = computed(() => {
   ]
 
   if (auth.isAuthor) {
+    items.push({ path: '/admin/posts/manage', label: 'Quản lý bài viết', icon: FileText, exact: false })
     items.push({ path: '/admin/posts/create', label: 'Đăng bài mới', icon: FileText, exact: false })
+    items.push({ path: '/admin/revenue', label: 'Thống kê doanh thu', icon: TrendingUp, exact: false })
   }
 
   if (auth.isAdmin || auth.isCensor) {
