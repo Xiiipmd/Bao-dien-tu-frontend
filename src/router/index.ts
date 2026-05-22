@@ -35,6 +35,11 @@ export const router = createRouter({
       children: [
         { path: '', component: () => import('@/views/admin/Dashboard.vue') },
         {
+          path: 'posts/manage',
+          component: () => import('@/views/admin/ManagePosts.vue'),
+          meta: { requiresAuth: true, allowedRoles: ['AUTHOR'] } satisfies AppRouteMeta,
+        },
+        {
           path: 'posts/create',
           component: () => import('@/views/admin/CreatePost.vue'),
           meta: { requiresAuth: true, allowedRoles: ['AUTHOR'] } satisfies AppRouteMeta,
@@ -42,6 +47,11 @@ export const router = createRouter({
         {
           path: 'posts/:articleId/edit',
           component: () => import('@/views/admin/CreatePost.vue'),
+          meta: { requiresAuth: true, allowedRoles: ['AUTHOR'] } satisfies AppRouteMeta,
+        },
+        {
+          path: 'revenue',
+          component: () => import('@/views/admin/RevenueStats.vue'),
           meta: { requiresAuth: true, allowedRoles: ['AUTHOR'] } satisfies AppRouteMeta,
         },
         {

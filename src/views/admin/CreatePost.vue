@@ -3,10 +3,17 @@
     <div class="mb-6 flex items-center justify-between">
       <h2 class="text-2xl font-bold text-gray-900">{{ isEditing ? 'Chỉnh sửa bài viết' : 'Viết bài mới' }}</h2>
       <div class="flex items-center gap-3">
+        <button
+          v-if="isEditing"
+          @click="handleCancelEdit"
+          class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Hủy
+        </button>
         <button @click="resetForm" class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
           <Save class="h-4 w-4" /> Làm mới
         </button>
-        <button :disabled="submitting" @click="handlePublish" class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-60">
+        <button :disabled="submitting || (isEditing && !!loadError)" @click="handlePublish" class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-60">
           <Send class="h-4 w-4" /> {{ submitting ? 'Đang gửi...' : (isEditing ? 'Cập nhật và gửi lại duyệt' : 'Xuất bản') }}
         </button>
       </div>
@@ -48,7 +55,7 @@
 
           <div>
             <label class="mb-2 block text-sm font-semibold text-gray-900">Loại nội dung</label>
-            <div class="flex h-[50px] items-center gap-6 rounded-lg border border-gray-300 px-4">
+            <div class="flex h-12.5 items-center gap-6 rounded-lg border border-gray-300 px-4">
               <label class="flex cursor-pointer items-center gap-2">
                 <input v-model="form.contentType" type="radio" value="FREE" class="h-4 w-4 text-blue-600 focus:ring-blue-500" />
                 <span class="text-sm font-medium text-gray-700">Miễn phí</span>
@@ -113,12 +120,13 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { Upload, Save, Send } from 'lucide-vue-next'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { createStaffArticle, fetchCategories, fetchManageableArticleDetail, updateStaffArticle, type CategoryOption } from '@/api/staff'
 
 const auth = useAuthStore()
 const route = useRoute()
+const router = useRouter()
 const categories = ref<CategoryOption[]>([])
 const loadError = ref('')
 const formError = ref('')
@@ -211,7 +219,8 @@ async function handlePublish() {
       })
       editingArticleStatus.value = updatedArticle.status
       rejectionReason.value = updatedArticle.rejectionReason ?? ''
-      successMessage.value = 'Bài viết đã được cập nhật và gửi lại để duyệt.'
+      await router.push({ path: '/admin/posts/manage', query: { updated: '1' } })
+      return
     } else {
       await createStaffArticle({
         authorId: auth.userId,
@@ -246,5 +255,9 @@ function resetForm() {
     excerpt: '',
     content: '',
   })
+}
+
+async function handleCancelEdit() {
+  await router.push({ path: '/admin/posts/manage', query: { cancelled: '1' } })
 }
 </script>
