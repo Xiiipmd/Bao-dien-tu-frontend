@@ -62,21 +62,37 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { LayoutDashboard, FileText, CheckSquare, Crown, LogOut, Search } from 'lucide-vue-next'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const auth = useAuthStore()
 
-const navItems = [
-  { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { path: '/admin/posts/create', label: 'Đăng bài mới', icon: FileText, exact: false },
-  { path: '/admin/posts/approval', label: 'Duyệt bài', icon: CheckSquare, exact: false },
-  { path: '/admin/vip', label: 'Gói VIP', icon: Crown, exact: false },
-]
+const navItems = computed(() => {
+  const items = [
+    { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  ]
+
+  if (auth.isAuthor) {
+    items.push({ path: '/admin/posts/create', label: 'Đăng bài mới', icon: FileText, exact: false })
+  }
+
+  if (auth.isAdmin || auth.isCensor) {
+    items.push({ path: '/admin/posts/approval', label: 'Duyệt bài', icon: CheckSquare, exact: false })
+  }
+
+  if (auth.isAdmin) {
+    items.push({ path: '/admin/posts/visibility', label: 'Ẩn / Hiện bài', icon: FileText, exact: false })
+    items.push({ path: '/admin/vip', label: 'Gói VIP', icon: Crown, exact: false })
+  }
+
+  return items
+})
 
 function isActive(item: { path: string; exact: boolean }) {
   return item.exact ? route.path === item.path : route.path.startsWith(item.path)
 }
 
 const currentLabel = computed(() => {
-  return navItems.find(item => isActive(item))?.label ?? 'Quản trị'
+  return navItems.value.find(item => isActive(item))?.label ?? 'Quản trị'
 })
 </script>

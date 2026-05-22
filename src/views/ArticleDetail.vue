@@ -1,12 +1,15 @@
 <template>
   <div class="container mx-auto px-4 py-8 lg:px-8 max-w-7xl">
+    <div v-if="loading" class="flex min-h-[60vh] items-center justify-center text-gray-500">Đang tải chi tiết bài viết...</div>
+    <div v-else-if="pageError" class="rounded-2xl border border-red-200 bg-red-50 p-8 text-red-700">{{ pageError }}</div>
+    <template v-else-if="article">
     <div class="grid grid-cols-1 gap-12 lg:grid-cols-12">
       <!-- Main Content -->
       <div class="lg:col-span-8">
         <header class="mb-8">
           <div class="mb-4 flex items-center gap-2">
             <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800 uppercase tracking-wider">
-              {{ article.category }}
+              {{ article.categoryName }}
             </span>
             <span v-if="article.isVip" class="flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
               <Crown class="h-3 w-3" /> VIP
@@ -16,10 +19,9 @@
           <h1 class="mb-6 text-3xl font-bold leading-tight text-gray-900 md:text-4xl">{{ article.title }}</h1>
 
           <div class="flex flex-wrap items-center gap-6 border-y border-gray-100 py-4 text-sm text-gray-600">
-            <RouterLink :to="`/author/${article.authorId}`" class="flex items-center gap-2 group">
-              <img v-if="author" :src="author.avatar" :alt="author.name" class="h-6 w-6 rounded-full object-cover bg-gray-100" />
-              <User v-else class="h-4 w-4" />
-              <span class="font-medium group-hover:text-blue-600 transition-colors">{{ article.author }}</span>
+            <RouterLink :to="`/author/${encodeURIComponent(article.authorName)}`" class="flex items-center gap-2 group">
+              <img :src="authorAvatar" :alt="article.authorName" class="h-6 w-6 rounded-full object-cover bg-gray-100" />
+              <span class="font-medium group-hover:text-blue-600 transition-colors">{{ article.authorName }}</span>
             </RouterLink>
             <div class="flex items-center gap-2">
               <Calendar class="h-4 w-4" />
@@ -34,7 +36,7 @@
                 <Sparkles class="h-4 w-4 text-purple-500" />
                 {{ summaryLoading ? 'Đang tải...' : (isSummaryOpen ? 'Thu gọn tóm tắt' : 'Tóm tắt AI') }}
               </button>
-              <button class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+              <button @click="handleDownloadPdf" class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                 <Download class="h-4 w-4" /> Tải PDF
               </button>
             </div>
@@ -62,7 +64,7 @@
         <div class="relative">
           <div
             :class="['prose prose-lg max-w-none prose-p:text-gray-700 prose-headings:text-gray-900', showVipOverlay ? 'max-h-[300px] overflow-hidden' : '']"
-            v-html="article.content"
+            v-html="articleHtml"
           />
 
           <!-- VIP Overlay -->
@@ -99,7 +101,7 @@
               <p v-if="commentError" class="mt-2 text-sm text-red-600">{{ commentError }}</p>
             </div>
             <div class="flex justify-end">
-              <button type="submit" class="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700">
+              <button :disabled="commentSubmitting" type="submit" class="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60">
                 <Send class="h-4 w-4" /> Gửi bình luận
               </button>
             </div>
@@ -145,31 +147,53 @@
         </div>
       </aside>
     </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Calendar, User, Crown, Download, Sparkles, MessageSquare, Send } from 'lucide-vue-next'
-import { articles, comments as initialComments, authors } from '@/lib/mock-data'
+import { Calendar, Crown, Download, Sparkles, MessageSquare, Send } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
+import {
+  createArticleComment,
+  downloadArticlePdf,
+  fetchArticleComments,
+  fetchArticlePreview,
+  fetchArticleRead,
+  fetchPublicArticles,
+  toArticleCardViewModel,
+  toArticleCommentViewModel,
+  toArticleDetailViewModel,
+  type ArticleCardViewModel,
+  type ArticleCommentViewModel,
+  type ArticleDetailViewModel,
+} from '@/api/articles'
 
 const route = useRoute()
 const auth = useAuthStore()
 
 const id = computed(() => route.params.id as string)
-const article = computed(() => articles.find(a => a.id === id.value) ?? articles[0])
-const author = computed(() => authors.find(a => a.id === article.value.authorId))
-const relatedArticles = computed(() => articles.filter(a => a.id !== id.value).slice(0, 4))
-const showVipOverlay = computed(() => article.value.isVip && !auth.isVip)
 const articleIdNumber = computed(() => Number(id.value))
 const canFetchSummary = computed(() => Number.isFinite(articleIdNumber.value) && articleIdNumber.value > 0)
+const article = ref<ArticleDetailViewModel | null>(null)
+const articleHtml = ref('')
+const relatedArticles = ref<ArticleCardViewModel[]>([])
+const comments = ref<ArticleCommentViewModel[]>([])
+const loading = ref(true)
+const pageError = ref('')
+const previewMode = ref(false)
+const authorAvatar = computed(() => {
+  const name = article.value?.authorName ?? 'Tác giả'
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=e5e7eb&color=111827`
+})
+const showVipOverlay = computed(() => previewMode.value)
 
 const commentText = ref('')
 const commentError = ref('')
-const comments = ref([...initialComments])
+const commentSubmitting = ref(false)
 
 const isSummaryOpen = ref(false)
 const summaryContent = ref('')
@@ -177,13 +201,14 @@ const summaryError = ref('')
 const summaryLoading = ref(false)
 const nonVipNotice = ref('')
 
-watch(id, () => {
+watch(id, async () => {
   isSummaryOpen.value = false
   summaryContent.value = ''
   summaryError.value = ''
   summaryLoading.value = false
   nonVipNotice.value = ''
-})
+  await loadArticle()
+}, { immediate: true })
 
 async function toggleSummary() {
   if (!auth.isVip) {
@@ -224,23 +249,145 @@ async function fetchSummary() {
   }
 }
 
-function handleCommentSubmit() {
+async function handleCommentSubmit() {
+  if (!article.value) {
+    return
+  }
   if (commentText.value.trim().length < 5) {
     commentError.value = 'Bình luận quá ngắn, vui lòng nhập nội dung có ý nghĩa.'
     return
   }
-  if (commentText.value.includes('spam')) {
-    commentError.value = 'Nội dung chứa từ khóa không hợp lệ (spam).'
+
+  commentError.value = ''
+  commentSubmitting.value = true
+  try {
+    const createdComment = await createArticleComment(article.value.id, commentText.value.trim())
+    comments.value.unshift(toArticleCommentViewModel(createdComment))
+    commentText.value = ''
+  } catch (err: any) {
+    const status = err?.response?.status
+    if (status === 401) {
+      commentError.value = 'Vui lòng đăng nhập để bình luận.'
+    } else if (status === 403) {
+      commentError.value = err?.response?.data?.message ?? 'Chỉ thành viên VIP mới được bình luận.'
+    } else {
+      commentError.value = err?.response?.data?.message ?? 'Không thể gửi bình luận. Vui lòng thử lại.'
+    }
+  } finally {
+    commentSubmitting.value = false
+  }
+}
+
+async function handleDownloadPdf() {
+  if (!article.value) {
     return
   }
-  commentError.value = ''
-  comments.value.unshift({
-    id: Date.now(),
-    user: 'Người dùng',
-    avatar: 'https://i.pravatar.cc/150?u=new',
-    content: commentText.value,
-    time: 'Vừa xong',
-  })
-  commentText.value = ''
+
+  try {
+    const blob = await downloadArticlePdf(article.value.id)
+    const url = window.URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `article-${article.value.id}.pdf`
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (err: any) {
+    nonVipNotice.value = err?.response?.data?.message ?? 'Chỉ thành viên VIP mới được tải PDF bài viết.'
+  }
 }
+
+async function loadArticle() {
+  if (!canFetchSummary.value) {
+    pageError.value = 'Mã bài viết không hợp lệ.'
+    article.value = null
+    return
+  }
+
+  loading.value = true
+  pageError.value = ''
+  commentError.value = ''
+
+  try {
+    const [allArticles, commentList] = await Promise.all([
+      fetchPublicArticles(),
+      fetchArticleComments(articleIdNumber.value),
+    ])
+    const articleSummary = allArticles.find(candidate => candidate.id === articleIdNumber.value)
+
+    relatedArticles.value = allArticles
+      .filter(candidate => candidate.id !== articleIdNumber.value)
+      .slice(0, 4)
+      .map(toArticleCardViewModel)
+    comments.value = commentList.map(toArticleCommentViewModel)
+
+    try {
+      if (!auth.isLoggedIn && articleSummary?.type === 'VIP') {
+        throw {
+          response: {
+            status: 403,
+            data: {
+              message: 'Vui lòng đăng nhập để sử dụng lượt đọc miễn phí hoặc đăng ký VIP để đọc toàn bộ bài viết này.',
+            },
+          },
+        }
+      }
+
+      const readArticle = await fetchArticleRead(articleIdNumber.value)
+      article.value = toArticleDetailViewModel(readArticle)
+      articleHtml.value = readArticle.content
+      previewMode.value = false
+      nonVipNotice.value = readArticle.accessMessage ?? ''
+    } catch (err: any) {
+      if (err?.response?.status !== 403) {
+        throw err
+      }
+
+      const previewArticle = await fetchArticlePreview(articleIdNumber.value)
+      article.value = {
+        id: previewArticle.id,
+        title: previewArticle.title,
+        sapo: previewArticle.sapo,
+        content: previewArticle.previewContent,
+        image: previewArticle.coverImage,
+        authorName: previewArticle.authorName,
+        categoryName: previewArticle.categoryName,
+        isVip: previewArticle.type === 'VIP',
+        date: '',
+        viewCount: 0,
+        vipAccessGranted: false,
+        meteredAccessApplied: false,
+        remainingFreeReads: null,
+        accessMessage: err?.response?.data?.message ?? 'Bài viết này yêu cầu quyền đọc VIP.',
+      }
+      articleHtml.value = renderPreviewHtml(previewArticle.previewContent)
+      previewMode.value = true
+      nonVipNotice.value = err?.response?.data?.message ?? 'Bạn cần VIP để đọc tiếp nội dung đầy đủ.'
+    }
+  } catch (err: any) {
+    pageError.value = err?.response?.data?.message ?? 'Không thể tải chi tiết bài viết. Vui lòng thử lại.'
+    article.value = null
+    relatedArticles.value = []
+    comments.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+function renderPreviewHtml(content: string) {
+  return content
+    .split(/\n\s*\n/)
+    .filter(Boolean)
+    .map(paragraph => `<p>${escapeHtml(paragraph).replace(/\n/g, '<br />')}</p>`)
+    .join('')
+}
+
+function escapeHtml(content: string) {
+  return content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
 </script>

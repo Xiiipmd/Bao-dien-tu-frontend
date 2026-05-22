@@ -7,6 +7,7 @@ export const useAuthStore = defineStore('auth', () => {
   const userName = ref<string | null>(localStorage.getItem('user_name'))
   const role = ref<string | null>(localStorage.getItem('user_role'))
   const vipExpiryDate = ref<string | null>(localStorage.getItem('vip_expiry'))
+  const userId = computed<number | null>(() => decodeUserId(token.value))
 
   const isLoggedIn = computed(() => !!token.value)
   const isVip = computed(() => {
@@ -14,6 +15,9 @@ export const useAuthStore = defineStore('auth', () => {
     return new Date(vipExpiryDate.value) > new Date()
   })
   const isAdmin = computed(() => role.value === 'ADMIN')
+  const isAuthor = computed(() => role.value === 'AUTHOR')
+  const isCensor = computed(() => role.value === 'CENSOR')
+  const isStaff = computed(() => ['ADMIN', 'AUTHOR', 'CENSOR'].includes(role.value ?? ''))
 
   async function login(email: string, password: string) {
     const res = await api.post('/api/auth/login', { email, password })
@@ -51,5 +55,41 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('vip_expiry')
   }
 
-  return { token, userName, role, vipExpiryDate, isLoggedIn, isVip, isAdmin, login, register, logout }
+  return {
+    token,
+    userId,
+    userName,
+    role,
+    vipExpiryDate,
+    isLoggedIn,
+    isVip,
+    isAdmin,
+    isAuthor,
+    isCensor,
+    isStaff,
+    login,
+    register,
+    logout,
+  }
 })
+
+function decodeUserId(jwtToken: string | null) {
+  if (!jwtToken) {
+    return null
+  }
+
+  try {
+    const [, payload] = jwtToken.split('.')
+    if (!payload) {
+      return null
+    }
+
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const decodedPayload = atob(normalizedPayload)
+    const parsedPayload = JSON.parse(decodedPayload) as { sub?: string }
+    const parsedUserId = Number(parsedPayload.sub)
+    return Number.isFinite(parsedUserId) ? parsedUserId : null
+  } catch {
+    return null
+  }
+}
