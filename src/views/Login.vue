@@ -85,14 +85,7 @@ async function handleSubmit() {
   loading.value = true
   try {
     await auth.login(email.value, password.value)
-    const redirect = (router.currentRoute.value.query.redirect as string) || null
-    if (redirect) {
-      router.push(redirect)
-    } else if (auth.isAdmin) {
-      router.push('/admin')
-    } else {
-      router.push('/')
-    }
+    router.push('/')
   } catch (err: any) {
     errorMsg.value = err?.response?.data?.message ?? 'Email hoặc mật khẩu không đúng.'
   } finally {

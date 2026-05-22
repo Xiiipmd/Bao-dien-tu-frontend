@@ -16,9 +16,14 @@
             <span class="text-sm font-semibold text-gray-700 hover:text-blue-600">Danh mục</span>
             <div class="absolute left-0 top-full pt-2 hidden group-hover:block w-48">
               <div class="rounded-lg bg-white p-2 shadow-lg border border-gray-100">
-                <RouterLink to="/search?category=tech" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded">Công nghệ</RouterLink>
-                <RouterLink to="/search?category=business" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded">Kinh doanh</RouterLink>
-                <RouterLink to="/search?category=lifestyle" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded">Đời sống</RouterLink>
+                <RouterLink
+                  v-for="category in categories"
+                  :key="category"
+                  :to="`/search?category=${encodeURIComponent(category)}`"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded"
+                >
+                  {{ category }}
+                </RouterLink>
               </div>
             </div>
           </div>
@@ -47,7 +52,7 @@
                 <Crown v-if="auth.isVip" class="h-4 w-4 text-amber-500" title="Thành viên VIP" />
               </div>
               <button
-                @click="auth.logout()"
+                @click="handleLogout"
                 class="hidden md:flex items-center justify-center p-2 text-gray-600 hover:text-red-600 rounded-full bg-gray-50 hover:bg-red-50 transition-colors"
                 title="Đăng xuất"
               >
@@ -59,7 +64,7 @@
               <RouterLink to="/register" class="hidden rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 md:block">Đăng ký</RouterLink>
             </template>
 
-            <RouterLink v-if="auth.isAdmin" to="/admin" class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full" title="Trang quản trị">
+            <RouterLink v-if="auth.isStaff" to="/admin" class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full" title="Khu vực nghiệp vụ">
               <User class="h-5 w-5" />
             </RouterLink>
 
@@ -113,18 +118,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Search, Crown, Menu, User, LogOut } from 'lucide-vue-next'
+import { fetchCategories } from '@/api/articles'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const searchQuery = ref('')
+const categories = ref<string[]>([])
+
+onMounted(loadCategories)
+
+watch(() => route.fullPath, () => {
+  searchQuery.value = ''
+})
+
+async function loadCategories() {
+  try {
+    const response = await fetchCategories()
+    categories.value = response.map(category => category.name)
+  } catch {
+    categories.value = []
+  }
+}
 
 function handleSearch() {
   if (searchQuery.value.trim()) {
     router.push(`/search?q=${encodeURIComponent(searchQuery.value)}`)
   }
+}
+
+function handleLogout() {
+  auth.logout()
+  router.push('/')
 }
 </script>

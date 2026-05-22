@@ -1,5 +1,11 @@
 <template>
   <div class="container mx-auto px-4 py-8 lg:px-8">
+    <div v-if="loading" class="flex min-h-[60vh] items-center justify-center text-gray-500">Đang tải bài viết...</div>
+    <div v-else-if="error" class="rounded-2xl border border-red-200 bg-red-50 p-8 text-red-700">{{ error }}</div>
+    <div v-else-if="!featuredArticle" class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center text-gray-500">
+      Chưa có bài viết xuất bản để hiển thị.
+    </div>
+    <template v-else>
     <!-- Hero Section -->
     <section class="mb-16">
       <div class="relative overflow-hidden rounded-2xl bg-slate-900 group">
@@ -51,12 +57,12 @@
             Danh mục
           </h3>
           <ul class="space-y-3">
-            <li v-for="cat in categories" :key="cat.id">
+            <li v-for="cat in categories" :key="cat">
               <RouterLink
-                :to="`/search?category=${cat.id}`"
+                :to="`/search?category=${encodeURIComponent(cat)}`"
                 class="flex items-center justify-between rounded-lg p-2 text-gray-600 hover:bg-gray-50 hover:text-blue-600 font-medium transition-colors"
               >
-                {{ cat.name }}
+                {{ cat }}
                 <ChevronRight class="h-4 w-4 text-gray-400" />
               </RouterLink>
             </li>
@@ -88,16 +94,51 @@
         </div>
       </aside>
     </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ArrowRight, ChevronRight, TrendingUp } from 'lucide-vue-next'
-import { articles, categories } from '@/lib/mock-data'
 import ArticleCard from '@/components/ArticleCard.vue'
+import { fetchCategories, fetchPublicArticles, toArticleCardViewModel, type ArticleCardViewModel } from '@/api/articles'
 
-const featuredArticle = computed(() => articles[0])
-const gridArticles = computed(() => articles.slice(1))
-const trendingArticles = computed(() => articles.slice(2, 5))
+const articles = ref<ArticleCardViewModel[]>([])
+const categories = ref<string[]>([])
+const loading = ref(true)
+const error = ref('')
+
+const featuredArticle = computed(() => articles.value[0] ?? null)
+const gridArticles = computed(() => articles.value.slice(1, 5))
+const trendingArticles = computed(() => articles.value.slice(0, 3))
+
+onMounted(loadArticles)
+
+async function loadArticles() {
+  loading.value = true
+  error.value = ''
+  try {
+    const [articleResult, categoryResult] = await Promise.allSettled([
+      fetchPublicArticles(),
+      fetchCategories(),
+    ])
+
+    if (articleResult.status === 'rejected') {
+      throw articleResult.reason
+    }
+
+    articles.value = articleResult.value.map(toArticleCardViewModel)
+
+    if (categoryResult.status === 'fulfilled') {
+      categories.value = categoryResult.value.map(category => category.name)
+    } else {
+      categories.value = []
+    }
+  } catch (err: any) {
+    error.value = err?.response?.data?.message ?? 'Không thể tải danh sách bài viết. Vui lòng thử lại.'
+  } finally {
+    loading.value = false
+  }
+}
 </script>

@@ -27,19 +27,21 @@
           class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
         >
           <option value="">Tất cả danh mục</option>
-          <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+          <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
         </select>
 
-        <select class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm focus:border-blue-500 focus:outline-none">
+        <select v-model="authorFilter" @change="applyFilters" class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm focus:border-blue-500 focus:outline-none">
           <option value="">Tất cả tác giả</option>
-          <option value="A">Nguyễn Văn A</option>
-          <option value="B">Trần Thị B</option>
+          <option v-for="author in authors" :key="author" :value="author">{{ author }}</option>
         </select>
       </div>
     </div>
 
     <!-- Results -->
     <div>
+      <div v-if="loading" class="rounded-2xl border border-gray-100 bg-white p-12 text-center text-gray-500">Đang tìm kiếm bài viết...</div>
+      <div v-else-if="error" class="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">{{ error }}</div>
+      <template v-else>
       <h2 class="mb-6 text-xl font-bold text-gray-900">
         {{ filteredArticles.length > 0 ? `Tìm thấy ${filteredArticles.length} kết quả` : 'Kết quả tìm kiếm' }}
       </h2>
@@ -52,48 +54,59 @@
         <SearchX class="mb-4 h-16 w-16 text-gray-400" />
         <h3 class="mb-2 text-xl font-bold text-gray-900">Không tìm thấy kết quả</h3>
         <p class="text-gray-500">
-          Rất tiếc, chúng tôi không tìm thấy bài viết nào phù hợp với "{{ query }}".<br />
+          Rất tiếc, chúng tôi không tìm thấy bài viết nào phù hợp với "{{ queryLabel }}".<br />
           Vui lòng thử lại với từ khóa khác.
         </p>
       </div>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Search as SearchIcon, Filter, SearchX } from 'lucide-vue-next'
-import { articles, categories } from '@/lib/mock-data'
 import ArticleCard from '@/components/ArticleCard.vue'
+import { fetchPublicArticles, toArticleCardViewModel, type ArticleCardViewModel, type ArticleSearchResponse } from '@/api/articles'
 
 const route = useRoute()
 const router = useRouter()
 
 const searchInput = ref((route.query.q as string) ?? '')
 const categoryFilter = ref((route.query.category as string) ?? '')
+const authorFilter = ref((route.query.author as string) ?? '')
 const query = ref((route.query.q as string) ?? '')
+const allArticles = ref<ArticleSearchResponse[]>([])
+const searchResults = ref<ArticleSearchResponse[]>([])
+const loading = ref(false)
+const error = ref('')
 
-watch(() => route.query, (q) => {
+watch(() => route.query, async (q) => {
   searchInput.value = (q.q as string) ?? ''
   categoryFilter.value = (q.category as string) ?? ''
+  authorFilter.value = (q.author as string) ?? ''
   query.value = (q.q as string) ?? ''
-})
+  await loadSearchResults()
+}, { immediate: true })
+
+onMounted(loadFilterOptions)
 
 const filteredArticles = computed(() => {
-  return articles.filter(article => {
-    const matchesQuery =
-      article.title.toLowerCase().includes(query.value.toLowerCase()) ||
-      article.excerpt.toLowerCase().includes(query.value.toLowerCase())
-    const matchesCategory = categoryFilter.value ? article.category === categoryFilter.value : true
-    return matchesQuery && matchesCategory
-  })
+  return searchResults.value
+    .filter(article => !categoryFilter.value || article.categoryName === categoryFilter.value)
+    .map(toArticleCardViewModel)
 })
+
+const categories = computed(() => [...new Set(allArticles.value.map(article => article.categoryName))])
+const authors = computed(() => [...new Set(allArticles.value.map(article => article.authorName))])
+const queryLabel = computed(() => query.value || authorFilter.value || categoryFilter.value || 'tiêu chí đã chọn')
 
 function handleSearch() {
   const params: Record<string, string> = {}
   if (searchInput.value) params.q = searchInput.value
   if (categoryFilter.value) params.category = categoryFilter.value
+  if (authorFilter.value) params.author = authorFilter.value
   router.push({ path: '/search', query: params })
 }
 
@@ -101,6 +114,31 @@ function applyFilters() {
   const params: Record<string, string> = {}
   if (query.value) params.q = query.value
   if (categoryFilter.value) params.category = categoryFilter.value
+  if (authorFilter.value) params.author = authorFilter.value
   router.push({ path: '/search', query: params })
+}
+
+async function loadFilterOptions() {
+  try {
+    allArticles.value = await fetchPublicArticles()
+  } catch {
+    allArticles.value = []
+  }
+}
+
+async function loadSearchResults() {
+  loading.value = true
+  error.value = ''
+  try {
+    searchResults.value = await fetchPublicArticles({
+      keyword: query.value || undefined,
+      authorName: authorFilter.value || undefined,
+    })
+  } catch (err: any) {
+    error.value = err?.response?.data?.message ?? 'Không thể tải kết quả tìm kiếm. Vui lòng thử lại.'
+    searchResults.value = []
+  } finally {
+    loading.value = false
+  }
 }
 </script>
