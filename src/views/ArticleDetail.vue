@@ -19,10 +19,14 @@
           <h1 class="mb-6 text-3xl font-bold leading-tight text-gray-900 md:text-4xl">{{ article.title }}</h1>
 
           <div class="flex flex-wrap items-center gap-6 border-y border-gray-100 py-4 text-sm text-gray-600">
-            <RouterLink :to="`/author/${encodeURIComponent(article.authorName)}`" class="flex items-center gap-2 group">
+            <RouterLink :to="`/author/${article.authorId}`" class="flex items-center gap-2 group" v-if="article.authorId !== undefined && article.authorId !== null">
               <img :src="authorAvatar" :alt="article.authorName" class="h-6 w-6 rounded-full object-cover bg-gray-100" />
               <span class="font-medium group-hover:text-blue-600 transition-colors">{{ article.authorName }}</span>
             </RouterLink>
+            <span v-else class="flex items-center gap-2 text-gray-400">
+              <img :src="authorAvatar" :alt="article.authorName" class="h-6 w-6 rounded-full object-cover bg-gray-100" />
+              <span class="font-medium">{{ article.authorName }}</span>
+            </span>
             <div class="flex items-center gap-2">
               <Calendar class="h-4 w-4" />
               <span>{{ article.date }}</span>
@@ -351,6 +355,7 @@ async function loadArticle() {
         sapo: previewArticle.sapo,
         content: previewArticle.previewContent,
         image: previewArticle.coverImage,
+        authorId: previewArticle.authorId,
         authorName: previewArticle.authorName,
         categoryName: previewArticle.categoryName,
         isVip: previewArticle.type === 'VIP',
