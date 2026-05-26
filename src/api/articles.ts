@@ -10,6 +10,7 @@ export interface ArticleCardViewModel {
   image: string
   isVip: boolean
   category: string
+  authorId: number
   authorName?: string
   date?: string
   createdAt?: string
@@ -21,6 +22,7 @@ export interface ArticleDetailViewModel {
   sapo: string
   content: string
   image: string
+  authorId: number
   authorName: string
   categoryName: string
   isVip: boolean
@@ -45,6 +47,7 @@ export interface ArticleSearchResponse {
   title: string
   sapo: string
   coverImage: string
+  authorId: number
   authorName: string
   categoryName: string
   type: BackendArticleType
@@ -57,6 +60,7 @@ export interface ArticlePreviewResponse {
   sapo: string
   coverImage: string
   previewContent: string
+  authorId: number
   authorName: string
   categoryName: string
   type: BackendArticleType
@@ -69,6 +73,7 @@ export interface ArticleReadResponse {
   sapo: string
   content: string
   coverImage: string
+  authorId: number
   authorName: string
   categoryName: string
   type: BackendArticleType
@@ -147,6 +152,7 @@ export function toArticleCardViewModel(article: ArticleSearchResponse): ArticleC
     image: article.coverImage,
     isVip: article.type === 'VIP',
     category: article.categoryName,
+    authorId: article.authorId,
     authorName: article.authorName,
     date: formatDate(article.createdAt),
     createdAt: formatDate(article.createdAt),
@@ -160,6 +166,7 @@ export function toArticleDetailViewModel(article: ArticleReadResponse): ArticleD
     sapo: article.sapo,
     content: article.content,
     image: article.coverImage,
+    authorId: article.authorId,
     authorName: article.authorName,
     categoryName: article.categoryName,
     isVip: article.type === 'VIP',

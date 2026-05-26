@@ -19,10 +19,14 @@
           <h1 class="mb-6 text-3xl font-bold leading-tight text-gray-900 md:text-4xl">{{ article.title }}</h1>
 
           <div class="flex flex-wrap items-center gap-6 border-y border-gray-100 py-4 text-sm text-gray-600">
-            <RouterLink :to="`/author/${encodeURIComponent(article.authorName)}`" class="flex items-center gap-2 group">
+            <RouterLink :to="`/author/${article.authorId}`" class="flex items-center gap-2 group" v-if="article.authorId !== undefined && article.authorId !== null">
               <img :src="authorAvatar" :alt="article.authorName" class="h-6 w-6 rounded-full object-cover bg-gray-100" />
               <span class="font-medium group-hover:text-blue-600 transition-colors">{{ article.authorName }}</span>
             </RouterLink>
+            <span v-else class="flex items-center gap-2 text-gray-400">
+              <img :src="authorAvatar" :alt="article.authorName" class="h-6 w-6 rounded-full object-cover bg-gray-100" />
+              <span class="font-medium">{{ article.authorName }}</span>
+            </span>
             <div class="flex items-center gap-2">
               <Calendar class="h-4 w-4" />
               <span>{{ article.date }}</span>
@@ -63,13 +67,13 @@
 
         <div class="relative">
           <div
-            :class="['prose prose-lg max-w-none prose-p:text-gray-700 prose-headings:text-gray-900', showVipOverlay ? 'max-h-[300px] overflow-hidden' : '']"
+            :class="['prose prose-lg max-w-none prose-p:text-gray-700 prose-headings:text-gray-900', showVipOverlay ? 'max-h-75 overflow-hidden' : '']"
             v-html="articleHtml"
           />
 
           <!-- VIP Overlay -->
           <template v-if="showVipOverlay">
-            <div class="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-white via-white/80 to-transparent backdrop-blur-[2px]" />
+            <div class="absolute bottom-0 left-0 right-0 h-48 bg-linear-to-t from-white via-white/80 to-transparent backdrop-blur-[2px]" />
             <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-md">
               <div class="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center shadow-lg">
                 <Crown class="mx-auto mb-3 h-10 w-10 text-amber-500" />
@@ -135,7 +139,7 @@
               :to="`/article/${related.id}`"
               class="group flex gap-4"
             >
-              <div class="h-20 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
+              <div class="h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                 <img :src="related.image" :alt="related.title" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
               </div>
               <div class="flex flex-1 flex-col justify-center">
@@ -351,6 +355,7 @@ async function loadArticle() {
         sapo: previewArticle.sapo,
         content: previewArticle.previewContent,
         image: previewArticle.coverImage,
+        authorId: previewArticle.authorId,
         authorName: previewArticle.authorName,
         categoryName: previewArticle.categoryName,
         isVip: previewArticle.type === 'VIP',
