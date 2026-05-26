@@ -8,7 +8,7 @@
     <!-- Cover Image -->
     <div class="h-64 w-full bg-slate-800 relative">
       <img :src="coverImage" alt="Cover" class="h-full w-full object-cover opacity-60" />
-      <div class="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent" />
+      <div class="absolute inset-0 bg-linear-to-t from-gray-900/80 to-transparent" />
     </div>
 
     <div class="container mx-auto px-4 lg:px-8 max-w-5xl -mt-24 relative z-10">
