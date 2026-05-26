@@ -63,13 +63,13 @@
 
         <div class="relative">
           <div
-            :class="['prose prose-lg max-w-none prose-p:text-gray-700 prose-headings:text-gray-900', showVipOverlay ? 'max-h-[300px] overflow-hidden' : '']"
+            :class="['prose prose-lg max-w-none prose-p:text-gray-700 prose-headings:text-gray-900', showVipOverlay ? 'max-h-75 overflow-hidden' : '']"
             v-html="articleHtml"
           />
 
           <!-- VIP Overlay -->
           <template v-if="showVipOverlay">
-            <div class="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-white via-white/80 to-transparent backdrop-blur-[2px]" />
+            <div class="absolute bottom-0 left-0 right-0 h-48 bg-linear-to-t from-white via-white/80 to-transparent backdrop-blur-[2px]" />
             <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-md">
               <div class="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center shadow-lg">
                 <Crown class="mx-auto mb-3 h-10 w-10 text-amber-500" />
@@ -135,7 +135,7 @@
               :to="`/article/${related.id}`"
               class="group flex gap-4"
             >
-              <div class="h-20 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
+              <div class="h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                 <img :src="related.image" :alt="related.title" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
               </div>
               <div class="flex flex-1 flex-col justify-center">

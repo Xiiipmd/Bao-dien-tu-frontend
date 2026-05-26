@@ -99,7 +99,7 @@
           Tính năng gửi email bài mới chỉ khả dụng sau khi đăng nhập và áp dụng cho tài khoản VIP.
         </p>
         <p v-else-if="!auth.isVip" class="mt-3 text-sm text-amber-700">
-          Backend yêu cầu tài khoản VIP để tạo và quản lý đăng ký nhận email.
+          Yêu cầu đăng ký VIP để sử dụng.
         </p>
         <p v-else-if="selectedCategorySubscription" class="mt-3 text-sm text-emerald-700">
           Bạn đang theo dõi chuyên mục này và sẽ nhận email khi có bài mới được duyệt xuất bản.
