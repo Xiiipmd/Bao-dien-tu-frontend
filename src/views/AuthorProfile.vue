@@ -6,14 +6,11 @@
     >
       Đang tải bài viết của tác giả...
     </div>
-
-    <div
-      v-else-if="error"
-      class="container mx-auto max-w-5xl px-4 py-12 lg:px-8"
-    >
-      <div class="rounded-2xl border border-red-200 bg-red-50 p-8 text-red-700">
-        {{ error }}
-      </div>
+    <template v-else>
+    <!-- Cover Image -->
+    <div class="h-64 w-full bg-slate-800 relative">
+      <img :src="coverImage" alt="Cover" class="h-full w-full object-cover opacity-60" />
+      <div class="absolute inset-0 bg-linear-to-t from-gray-900/80 to-transparent" />
     </div>
 
     <template v-else>

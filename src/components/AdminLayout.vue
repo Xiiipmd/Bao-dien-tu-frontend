@@ -5,7 +5,7 @@
       <div class="flex h-16 items-center px-6 border-b border-slate-800">
         <RouterLink to="/" class="flex items-center gap-2 text-white">
           <div class="flex h-8 w-8 items-center justify-center rounded bg-blue-600 font-bold text-xl">N</div>
-          <span class="text-xl font-bold tracking-tight">Admin Panel</span>
+          <span class="text-xl font-bold tracking-tight">Panel</span>
         </RouterLink>
       </div>
 
@@ -15,8 +15,10 @@
           :key="item.path"
           :to="item.path"
           :class="[
-            'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-            isActive(item) ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150',
+            isActive(item)
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-300 hover:bg-blue-50 hover:text-blue-700 active:bg-blue-100 focus:bg-blue-100 focus:text-blue-700'
           ]"
         >
           <component :is="item.icon" class="h-5 w-5" />
@@ -45,7 +47,6 @@
               class="h-9 rounded-full bg-gray-100 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-100 focus:bg-white border border-transparent focus:border-blue-200"
             />
           </div>
-          <div class="h-8 w-8 cursor-pointer rounded-full bg-linear-to-r from-blue-500 to-indigo-500" />
         </div>
       </header>
 
