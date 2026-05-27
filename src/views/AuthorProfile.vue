@@ -1,124 +1,50 @@
 <template>
   <div class="bg-gray-50 min-h-screen pb-16">
-    <div
-      v-if="loading"
-      class="flex min-h-[60vh] items-center justify-center text-gray-500"
-    >
+    <div v-if="loading" class="flex min-h-[60vh] items-center justify-center text-gray-500">
       Đang tải bài viết của tác giả...
     </div>
-    <template v-else>
-    <!-- Cover Image -->
-    <div class="h-64 w-full bg-slate-800 relative">
-      <img :src="coverImage" alt="Cover" class="h-full w-full object-cover opacity-60" />
-      <div class="absolute inset-0 bg-linear-to-t from-gray-900/80 to-transparent" />
-    </div>
-
-    <template v-else>
+    <div v-else>
       <!-- Cover Image -->
       <div class="relative h-64 w-full bg-slate-800">
-        <img
-          :src="coverImage"
-          alt="Cover"
-          class="h-full w-full object-cover opacity-60"
-        />
-
-        <div
-          class="absolute inset-0 pointer-events-none bg-linear-to-t from-gray-900/80 to-transparent"
-        />
+        <img :src="coverImage" alt="Cover" class="h-full w-full object-cover opacity-60" />
+        <div class="absolute inset-0 pointer-events-none bg-linear-to-t from-gray-900/80 to-transparent" />
       </div>
-
-      <div
-        class="container mx-auto relative z-10 -mt-24 max-w-5xl px-4 lg:px-8"
-      >
+      <div class="container mx-auto relative z-10 -mt-24 max-w-5xl px-4 lg:px-8">
         <!-- Author Info Card -->
-        <div
-          class="mb-10 rounded-2xl border border-gray-100 bg-white p-6 shadow-xl shadow-gray-200/50"
-        >
-          <div
-            class="mb-6 flex flex-col items-start gap-6 md:-mt-20 md:flex-row md:items-end"
-          >
-            <img
-              :src="avatarUrl"
-              :alt="authorName"
-              class="h-32 w-32 rounded-full border-4 border-white bg-white object-cover shadow-md"
-            />
-
-            <div
-              class="flex w-full flex-1 flex-col justify-between gap-4 md:flex-row md:items-end"
-            >
+        <div class="mb-10 rounded-2xl border border-gray-100 bg-white p-6 shadow-xl shadow-gray-200/50">
+          <div class="mb-6 flex flex-col items-start gap-6 md:-mt-20 md:flex-row md:items-end">
+            <img :src="avatarUrl" :alt="authorName" class="h-32 w-32 rounded-full border-4 border-white bg-white object-cover shadow-md" />
+            <div class="flex w-full flex-1 flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
-                <h1 class="mb-1 text-3xl font-bold text-gray-900">
-                  {{ authorName }}
-                </h1>
-
-                <p class="mb-2 text-sm font-medium text-blue-600">
-                  Tác giả đang có {{ authorArticles.length }} bài viết xuất bản
-                </p>
+                <h1 class="mb-1 text-3xl font-bold text-gray-900">{{ authorName }}</h1>
+                <p class="mb-2 text-sm font-medium text-blue-600">Tác giả đang có {{ authorArticles.length }} bài viết xuất bản</p>
               </div>
-
               <div class="flex w-full gap-3 md:w-auto">
-                <RouterLink
-                  :to="`/author/${authorId}`"
-                  class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700 md:flex-none"
-                >
+                <RouterLink :to="`/author/${authorId}`" class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700 md:flex-none">
                   <UserPlus class="h-4 w-4" />
                   Xem tất cả bài viết
                 </RouterLink>
-
-                <button
-                  v-if="canShowFollowButton"
-                  :disabled="followLoading"
-                  @click="toggleFollow"
-                  style="z-index:10; pointer-events:auto; position:relative;"
-                  class="flex flex-1 items-center justify-center gap-2 rounded-lg px-6 py-2.5 font-semibold transition-colors md:flex-none"
-                  :class="
-                    isFollowing
-                      ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      : 'bg-amber-500 text-white hover:bg-amber-600'
-                  "
-                >
+                <button v-if="canShowFollowButton" :disabled="followLoading" @click="toggleFollow" style="z-index:10; pointer-events:auto; position:relative;" class="flex flex-1 items-center justify-center gap-2 rounded-lg px-6 py-2.5 font-semibold transition-colors md:flex-none" :class="isFollowing ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-amber-500 text-white hover:bg-amber-600'">
                   <span v-if="isFollowing">Đã theo dõi</span>
                   <span v-else>Theo dõi tác giả (VIP)</span>
                 </button>
               </div>
             </div>
           </div>
-
           <!-- Author's Articles -->
           <div>
             <div class="mb-6 flex items-center justify-between">
-              <h2 class="text-2xl font-bold text-gray-900">
-                Bài viết của {{ authorName }}
-              </h2>
-
-              <span
-                class="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-500"
-              >
-                {{ authorArticles.length }} bài viết
-              </span>
+              <h2 class="text-2xl font-bold text-gray-900">Bài viết của {{ authorName }}</h2>
+              <span class="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-500">{{ authorArticles.length }} bài viết</span>
             </div>
-
-            <div
-              v-if="authorArticles.length > 0"
-              class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-            >
-              <ArticleCard
-                v-for="article in authorArticles"
-                :key="article.id"
-                :article="article"
-              />
+            <div v-if="authorArticles.length > 0" class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <ArticleCard v-for="article in authorArticles" :key="article.id" :article="article" />
             </div>
-
-            <div
-              v-else
-              class="rounded-xl border border-dashed border-gray-300 p-12 text-center text-gray-500"
-            >
-              Tác giả này chưa có bài viết nào.
-            </div>
+            <div v-else class="rounded-xl border border-dashed border-gray-300 p-12 text-center text-gray-500">Tác giả này chưa có bài viết nào.</div>
           </div>
         </div>
       </div>
-    </template>
+    </div>
   </div>
 </template>
 
