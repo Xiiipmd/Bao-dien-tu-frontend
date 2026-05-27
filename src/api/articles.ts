@@ -236,7 +236,7 @@ export function formatRelativeTime(value?: string | null) {
   return formatDate(value)
 }
 
-function buildSearchParams(filters: ArticleSearchFilters) {
+function buildSearchParams(filters: ArticleSearchFilters & { authorId?: number }) {
   const params: Record<string, string | number> = {}
 
   if (filters.keyword && filters.keyword.trim()) {
@@ -247,6 +247,9 @@ function buildSearchParams(filters: ArticleSearchFilters) {
   }
   if (filters.authorName && filters.authorName.trim()) {
     params.authorName = filters.authorName.trim()
+  }
+  if (filters.authorId) {
+    params.authorId = filters.authorId
   }
 
   return params
