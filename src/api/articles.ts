@@ -27,6 +27,7 @@ export interface ArticleDetailViewModel {
   categoryName: string
   isVip: boolean
   date: string
+  createdAt: string
   viewCount: number
   vipAccessGranted: boolean
   meteredAccessApplied: boolean
@@ -172,6 +173,7 @@ export function toArticleDetailViewModel(article: ArticleReadResponse): ArticleD
     categoryName: article.categoryName,
     isVip: article.type === 'VIP',
     date: formatDate(article.createdAt),
+    createdAt: article.createdAt,
     viewCount: article.viewCount,
     vipAccessGranted: article.vipAccessGranted,
     meteredAccessApplied: article.meteredAccessApplied,

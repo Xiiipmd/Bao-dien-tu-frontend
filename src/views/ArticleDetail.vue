@@ -33,6 +33,15 @@
             </div>
             <div class="ml-auto flex items-center gap-3">
               <button
+                v-if="showStatsToggle"
+                :disabled="statsLoading"
+                @click="toggleStats"
+                class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
+              >
+                <BarChart3 class="h-4 w-4 text-blue-500" />
+                {{ statsOpen ? 'Ẩn thống kê' : 'Thống kê bài báo' }}
+              </button>
+              <button
                 :disabled="summaryLoading"
                 @click="toggleSummary"
                 class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
@@ -60,6 +69,104 @@
             <p v-else class="text-sm leading-6 text-gray-700 whitespace-pre-line">{{ summaryContent }}</p>
           </div>
         </div>
+
+        <section v-if="statsOpen" class="mb-10 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div class="flex flex-col gap-4">
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">Thống kê bài viết</h3>
+              <p class="mt-1 text-sm text-gray-500">Chọn khoảng thời gian và đơn vị hiển thị trước khi xem thống kê.</p>
+            </div>
+
+            <div v-if="!canViewStats" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              Bạn chỉ có thể xem thống kê bài viết của chính mình.
+            </div>
+
+            <template v-else>
+              <form class="grid gap-3 md:grid-cols-4" @submit.prevent="handleStatsSubmit">
+                <label class="text-sm font-medium text-gray-700">
+                  <span class="mb-2 block">Từ thời điểm</span>
+                  <input
+                    v-model="statsStartInput"
+                    type="datetime-local"
+                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+
+                <label class="text-sm font-medium text-gray-700">
+                  <span class="mb-2 block">Đến thời điểm</span>
+                  <input
+                    v-model="statsEndInput"
+                    type="datetime-local"
+                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+
+                <label class="text-sm font-medium text-gray-700">
+                  <span class="mb-2 block">Granularity</span>
+                  <select
+                    v-model="statsGranularity"
+                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="hour">Theo giờ</option>
+                    <option value="day">Theo ngày</option>
+                    <option value="month">Theo tháng</option>
+                  </select>
+                </label>
+
+                <div class="flex items-end">
+                  <button
+                    type="submit"
+                    :disabled="statsLoading"
+                    class="w-full rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                  >
+                    {{ statsLoading ? 'Đang tải...' : 'Xem thống kê' }}
+                  </button>
+                </div>
+              </form>
+
+              <p class="text-xs text-gray-500">
+                Bỏ trống để mặc định từ ngày đăng bài đến thời điểm hiện tại.
+              </p>
+
+              <div v-if="statsError" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {{ statsError }}
+              </div>
+
+              <div v-if="statsWarning" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {{ statsWarning }}
+              </div>
+
+              <div v-if="statsData" class="mt-6 space-y-6">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                    <p class="text-sm font-medium text-gray-500">Tổng lượt xem</p>
+                    <p class="mt-3 text-2xl font-bold text-gray-900">{{ formatNumber(statsData.views) }}</p>
+                    <p class="mt-2 text-xs text-gray-500">Tổng lượt xem trong khoảng thời gian chọn.</p>
+                  </div>
+                  <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                    <p class="text-sm font-medium text-gray-500">{{ statsRevenueTitle }}</p>
+                    <p class="mt-3 text-2xl font-bold text-gray-900">{{ formatCurrency(statsData.estimatedEarning) }}</p>
+                    <p class="mt-2 text-xs text-gray-500">{{ statsRevenueCaption }}</p>
+                  </div>
+                </div>
+
+                <div v-if="statsNoData" class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-center text-sm text-gray-500">
+                  Chưa có dữ liệu.
+                </div>
+
+                <div v-else class="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                  <div class="mb-4">
+                    <h4 class="text-base font-bold text-gray-900">Biểu đồ lượt xem theo {{ statsGranularityLabel }}</h4>
+                    <p v-if="statsRangeLabel" class="mt-1 text-sm text-gray-500">{{ statsRangeLabel }}</p>
+                  </div>
+                  <div class="h-72">
+                    <Bar :data="statsChartData" :options="statsBarOptions" />
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </section>
 
         <div class="mb-10 aspect-video w-full overflow-hidden rounded-xl bg-gray-100">
           <img :src="article.image" :alt="article.title" class="h-full w-full object-cover" />
@@ -157,10 +264,20 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { Bar } from 'vue-chartjs'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Tooltip,
+  Legend,
+} from 'chart.js'
 import { useRoute } from 'vue-router'
-import { Calendar, Crown, Download, Sparkles, MessageSquare, Send } from 'lucide-vue-next'
+import { Calendar, Crown, Download, Sparkles, MessageSquare, Send, BarChart3 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
+import { fetchArticleStats, type ArticleStatDto } from '@/api/stats'
 import {
   createArticleComment,
   downloadArticlePdf,
@@ -175,6 +292,8 @@ import {
   type ArticleCommentViewModel,
   type ArticleDetailViewModel,
 } from '@/api/articles'
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -205,12 +324,91 @@ const summaryError = ref('')
 const summaryLoading = ref(false)
 const nonVipNotice = ref('')
 
+const statsOpen = ref(false)
+const statsLoading = ref(false)
+const statsError = ref('')
+const statsWarning = ref('')
+const statsData = ref<ArticleStatDto | null>(null)
+const statsStartInput = ref('')
+const statsEndInput = ref('')
+const statsGranularity = ref<'hour' | 'day' | 'month'>('day')
+const statsRange = ref<{ start: string; end: string } | null>(null)
+const articlePublishedAt = ref('')
+
+const showStatsToggle = computed(() => auth.isAdmin || auth.isAuthor)
+const canViewStats = computed(() => {
+  if (auth.isAdmin) return true
+  if (!auth.isAuthor) return false
+  if (!article.value || !auth.userId) return false
+  return article.value.authorId === auth.userId
+})
+
+const statsSeries = computed(() => statsData.value?.viewsByLevelOfGranularity ?? [])
+const statsNoData = computed(() => {
+  if (!statsData.value) return false
+  if (statsData.value.views === 0 && statsSeries.value.length === 0) return true
+  return statsData.value.views === 0 && statsSeries.value.every(value => value === 0)
+})
+
+const statsGranularityLabel = computed(() => {
+  switch (statsGranularity.value) {
+    case 'hour':
+      return 'giờ'
+    case 'month':
+      return 'tháng'
+    default:
+      return 'ngày'
+  }
+})
+
+const statsRangeLabel = computed(() => {
+  if (!statsRange.value) return ''
+  return `${formatDisplayDateTime(statsRange.value.start)} - ${formatDisplayDateTime(statsRange.value.end)}`
+})
+
+const statsRevenueTitle = computed(() => (auth.isAdmin ? 'Tổng doanh thu tác giả nhận' : 'Doanh thu tác giả nhận'))
+const statsRevenueCaption = computed(() => {
+  if (!article.value?.isVip) {
+    return 'Chỉ áp dụng cho bài viết VIP.'
+  }
+  return auth.isAdmin ? 'Ước tính doanh thu theo dữ liệu backend.' : 'Ước tính theo dữ liệu backend.'
+})
+
+const statsChartData = computed(() => ({
+  labels: statsSeries.value.map((_, index) => String(index + 1)),
+  datasets: [{
+    label: 'Lượt xem',
+    data: statsSeries.value,
+    backgroundColor: '#2563EB',
+    borderRadius: 4,
+  }],
+}))
+
+const statsBarOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { grid: { display: false } },
+    y: { grid: { color: '#E5E7EB' } },
+  },
+}
+
 watch(id, async () => {
   isSummaryOpen.value = false
   summaryContent.value = ''
   summaryError.value = ''
   summaryLoading.value = false
   nonVipNotice.value = ''
+  statsOpen.value = false
+  statsLoading.value = false
+  statsError.value = ''
+  statsWarning.value = ''
+  statsData.value = null
+  statsStartInput.value = ''
+  statsEndInput.value = ''
+  statsGranularity.value = 'day'
+  statsRange.value = null
   await loadArticle()
 }, { immediate: true })
 
@@ -250,6 +448,62 @@ async function fetchSummary() {
     }
   } finally {
     summaryLoading.value = false
+  }
+}
+
+function toggleStats() {
+  statsOpen.value = !statsOpen.value
+  if (!statsOpen.value) {
+    statsError.value = ''
+    statsWarning.value = ''
+  }
+}
+
+async function handleStatsSubmit() {
+  if (!article.value) {
+    statsError.value = 'Không xác định được bài viết để thống kê.'
+    return
+  }
+  if (!canViewStats.value) {
+    statsError.value = 'Bạn không có quyền xem thống kê bài viết này.'
+    return
+  }
+
+  statsError.value = ''
+  statsWarning.value = ''
+
+  const { start, end } = resolveStatsRange()
+  if (!start || !end) {
+    statsError.value = 'Vui lòng chọn khoảng thời gian hợp lệ.'
+    return
+  }
+
+  if (start > end) {
+    statsError.value = 'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.'
+    return
+  }
+
+  const startDate = new Date(start)
+  const endDate = new Date(end)
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    statsError.value = 'Định dạng thời gian không hợp lệ.'
+    return
+  }
+
+  const diffDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+  if (statsGranularity.value === 'hour' && diffDays > 365) {
+    statsWarning.value = 'Khoảng thời gian lớn hơn 1 năm. Nên chuyển sang thống kê theo ngày.'
+  }
+
+  statsLoading.value = true
+  try {
+    statsRange.value = { start, end }
+    statsData.value = await fetchArticleStats(article.value.id, start, end, statsGranularity.value)
+  } catch (err: any) {
+    statsError.value = err?.response?.data?.message ?? 'Không thể tải thống kê bài viết.'
+    statsData.value = null
+  } finally {
+    statsLoading.value = false
   }
 }
 
@@ -340,6 +594,7 @@ async function loadArticle() {
 
       const readArticle = await fetchArticleRead(articleIdNumber.value)
       article.value = toArticleDetailViewModel(readArticle)
+      articlePublishedAt.value = readArticle.createdAt ?? ''
       articleHtml.value = readArticle.content
       previewMode.value = false
       nonVipNotice.value = readArticle.accessMessage ?? ''
@@ -360,12 +615,14 @@ async function loadArticle() {
         categoryName: previewArticle.categoryName,
         isVip: previewArticle.type === 'VIP',
         date: '',
+        createdAt: '',
         viewCount: 0,
         vipAccessGranted: false,
         meteredAccessApplied: false,
         remainingFreeReads: null,
         accessMessage: err?.response?.data?.message ?? 'Bài viết này yêu cầu quyền đọc VIP.',
       }
+      articlePublishedAt.value = ''
       articleHtml.value = renderPreviewHtml(previewArticle.previewContent)
       previewMode.value = true
       nonVipNotice.value = err?.response?.data?.message ?? 'Bạn cần VIP để đọc tiếp nội dung đầy đủ.'
@@ -373,11 +630,76 @@ async function loadArticle() {
   } catch (err: any) {
     pageError.value = err?.response?.data?.message ?? 'Không thể tải chi tiết bài viết. Vui lòng thử lại.'
     article.value = null
+    articlePublishedAt.value = ''
     relatedArticles.value = []
     comments.value = []
   } finally {
     loading.value = false
   }
+}
+
+function resolveStatsRange() {
+  const fallbackStart = statsStartInput.value || toInputDateTime(articlePublishedAt.value || new Date())
+  const fallbackEnd = statsEndInput.value || toInputDateTime(new Date())
+  const start = toBackendDateTime(fallbackStart)
+  const end = toBackendDateTime(fallbackEnd)
+  return { start, end }
+}
+
+function toInputDateTime(value: string | Date) {
+  const date = typeof value === 'string' ? new Date(value) : value
+  if (Number.isNaN(date.getTime())) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day}T${hour}:${minute}`
+}
+
+function toBackendDateTime(value: string) {
+  if (!value) return ''
+  if (value.length === 16) {
+    return `${value}:00`
+  }
+  if (value.length === 10) {
+    return `${value}T00:00:00`
+  }
+  return value
+}
+
+function formatDisplayDateTime(value: string) {
+  if (!value) return ''
+  const [datePart, timePart] = value.split('T')
+  if (datePart && timePart) {
+    const [year, month, day] = datePart.split('-')
+    const [hour, minute] = timePart.split(':')
+    if (year && month && day && hour && minute) {
+      return `${day}/${month}/${year} ${hour}:${minute}`
+    }
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
+function formatNumber(value: number) {
+  return value.toLocaleString('vi-VN')
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(value)
 }
 
 function renderPreviewHtml(content: string) {

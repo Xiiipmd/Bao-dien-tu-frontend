@@ -80,6 +80,30 @@ export interface AdminTopStatDto {
   revenue: number
 }
 
+export interface ArticleStatDto {
+  views: number;
+  estimatedEarning: number;
+  viewsByLevelOfGranularity: number[];
+}
+
+export async function fetchArticleStats(
+  articleId: number,
+  startDate: string,
+  endDate: string,
+  granularity: 'hour' | 'day' | 'month',
+) {
+  const response = await api.get<ArticleStatDto>('/api/stats/article', {
+    params: {
+      articleId,
+      startDate,
+      endDate,
+      granularity,
+    },
+  })
+
+  return response.data
+}
+
 export async function fetchAuthorStats(
   authorId: number,
   startDate: string,
