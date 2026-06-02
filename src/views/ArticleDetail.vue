@@ -659,13 +659,20 @@ function toInputDateTime(value: string | Date) {
 
 function toBackendDateTime(value: string) {
   if (!value) return ''
+
+  let normalized = value
   if (value.length === 16) {
-    return `${value}:00`
+    normalized = `${value}:00`
+  } else if (value.length === 10) {
+    normalized = `${value}T00:00:00`
   }
-  if (value.length === 10) {
-    return `${value}T00:00:00`
+
+  const date = new Date(normalized)
+  if (Number.isNaN(date.getTime())) {
+    return ''
   }
-  return value
+
+  return date.toISOString()
 }
 
 function formatDisplayDateTime(value: string) {
