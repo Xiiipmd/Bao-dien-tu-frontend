@@ -52,7 +52,7 @@ export const router = createRouter({
         {
           path: 'revenue',
           component: () => import('@/views/admin/RevenueStats.vue'),
-          meta: { requiresAuth: true, allowedRoles: ['AUTHOR'] } satisfies AppRouteMeta,
+          meta: { requiresAuth: true, allowedRoles: ['ADMIN', 'AUTHOR'] } satisfies AppRouteMeta,
         },
         {
           path: 'posts/approval',

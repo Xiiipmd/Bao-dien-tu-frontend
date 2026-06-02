@@ -20,6 +20,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isStaff = computed(() => ['ADMIN', 'AUTHOR', 'CENSOR'].includes(role.value ?? ''))
 
   async function login(email: string, password: string) {
+    clearSession()
     const res = await api.post('/api/auth/login', { email, password })
     const data = res.data
     token.value = data.jwtToken
@@ -45,6 +46,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function logout() {
+    clearSession()
+  }
+
+  function clearSession() {
     token.value = null
     userName.value = null
     role.value = null

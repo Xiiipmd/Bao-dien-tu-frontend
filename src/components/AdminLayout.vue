@@ -85,6 +85,7 @@ const navItems = computed(() => {
 
   if (auth.isAdmin) {
     items.push({ path: '/admin/posts/visibility', label: 'Ẩn / Hiện bài', icon: FileText, exact: false })
+    items.push({ path: '/admin/revenue', label: 'Thống kê hệ thống', icon: TrendingUp, exact: false })
     items.push({ path: '/admin/vip', label: 'Gói VIP', icon: Crown, exact: false })
   }
 
