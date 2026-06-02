@@ -99,10 +99,15 @@
                     </form>
                     <RouterLink to="/" class="py-3 px-2 rounded text-base font-semibold text-gray-700 hover:bg-gray-100" @click="drawerOpen = false">Trang chủ</RouterLink>
                     <div>
-                      <div class="text-xs font-bold text-gray-500 mb-1">Chuyên mục</div>
-                      <div class="flex flex-col gap-1">
-                        <RouterLink v-for="category in categories" :key="category" :to="`/search?category=${encodeURIComponent(category)}`" class="py-2 px-2 rounded text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-150 active:bg-blue-100" @click="drawerOpen = false">{{ category }}</RouterLink>
-                      </div>
+                      <button type="button" class="w-full text-left text-base font-semibold text-gray-700 mb-1 flex items-center justify-between" @click="showMobileCategories = !showMobileCategories">
+                        Chuyên mục
+                        <svg :class="{'rotate-180': showMobileCategories}" class="w-4 h-4 ml-2 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                      </button>
+                      <transition name="fade">
+                        <div v-if="showMobileCategories" class="flex flex-col gap-1 mt-1">
+                          <RouterLink v-for="category in categories" :key="category" :to="`/search?category=${encodeURIComponent(category)}`" class="py-2 px-2 rounded text-base font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-150 active:bg-blue-100" @click="drawerOpen = false; showMobileCategories = false">{{ category }}</RouterLink>
+                        </div>
+                      </transition>
                     </div>
                     <RouterLink to="/vip" class="py-3 px-2 rounded text-base font-semibold text-amber-600 hover:bg-amber-50" @click="drawerOpen = false">Hội viên VIP</RouterLink>
                     <div class="border-t border-gray-200 my-2"></div>
@@ -188,6 +193,7 @@ const categories = ref<string[]>([])
 const mobileSearchInput = ref<HTMLInputElement | null>(null)
 
 const drawerOpen = ref(false)
+const showMobileCategories = ref(false)
 
 function openSearchDrawer() {
   drawerOpen.value = true
@@ -200,6 +206,10 @@ onMounted(loadCategories)
 
 watch(() => route.fullPath, () => {
   searchQuery.value = ''
+})
+
+watch(drawerOpen, (val) => {
+  if (!val) showMobileCategories.value = false
 })
 
 async function loadCategories() {

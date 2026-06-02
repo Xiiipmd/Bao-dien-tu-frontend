@@ -69,6 +69,11 @@ export const router = createRouter({
           component: () => import('@/views/admin/ManageVIP.vue'),
           meta: { requiresAuth: true, allowedRoles: ['ADMIN'] } satisfies AppRouteMeta,
         },
+        {
+          path: 'stats',
+          component: () => import('@/views/admin/AdminStats.vue'),
+          meta: { requiresAuth: true, allowedRoles: ['ADMIN'] } satisfies AppRouteMeta,
+        },
       ],
     },
   ],
