@@ -183,7 +183,7 @@ async function toggleFollow() {
       isFollowing.value = true
       console.log('[toggleFollow] Followed')
     }
-  } catch (err) {
+  } catch (err: any) {
     console.log('[toggleFollow] error', err)
     alert(err?.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại.')
   } finally {

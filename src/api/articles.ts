@@ -98,6 +98,7 @@ export interface ArticleSearchFilters {
   keyword?: string
   categoryId?: number | null
   authorName?: string
+  authorId?: number
 }
 
 export interface CategoryOption {
@@ -236,7 +237,7 @@ export function formatRelativeTime(value?: string | null) {
   return formatDate(value)
 }
 
-function buildSearchParams(filters: ArticleSearchFilters & { authorId?: number }) {
+function buildSearchParams(filters: ArticleSearchFilters) {
   const params: Record<string, string | number> = {}
 
   if (filters.keyword && filters.keyword.trim()) {
