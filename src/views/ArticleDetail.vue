@@ -273,7 +273,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Calendar, Crown, Download, Sparkles, MessageSquare, Send, BarChart3 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
@@ -296,6 +296,7 @@ import {
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 
 const id = computed(() => route.params.id as string)
@@ -500,7 +501,17 @@ async function handleStatsSubmit() {
     statsRange.value = { start, end }
     statsData.value = await fetchArticleStats(article.value.id, start, end, statsGranularity.value)
   } catch (err: any) {
-    statsError.value = err?.response?.data?.message ?? 'Không thể tải thống kê bài viết.'
+    const status = err?.response?.status
+    const serverMessage = err?.response?.data?.message
+    if (status === 401) {
+      auth.logout()
+      statsError.value = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để xem thống kê.'
+      void router.push({ path: '/login', query: { redirect: route.fullPath } })
+    } else if (status === 403) {
+      statsError.value = serverMessage ?? 'Tài khoản hiện tại không có quyền xem thống kê bài viết này.'
+    } else {
+      statsError.value = serverMessage ?? 'Không thể tải thống kê bài viết.'
+    }
     statsData.value = null
   } finally {
     statsLoading.value = false

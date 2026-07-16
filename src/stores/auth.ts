@@ -89,7 +89,10 @@ function decodeUserId(jwtToken: string | null) {
       return null
     }
 
-    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const normalizedPayload = payload
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+      .padEnd(Math.ceil(payload.length / 4) * 4, '=')
     const decodedPayload = atob(normalizedPayload)
     const parsedPayload = JSON.parse(decodedPayload) as { sub?: string }
     const parsedUserId = Number(parsedPayload.sub)

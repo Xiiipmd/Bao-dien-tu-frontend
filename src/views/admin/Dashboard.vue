@@ -36,6 +36,37 @@
       </div>
     </div>
 
+    <div v-if="auth.isAdmin" class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h3 class="text-lg font-bold text-gray-900">Top 5 tác giả có view thấp nhất</h3>
+          <p class="mt-1 text-sm text-gray-500">Thống kê theo lượt xem bài viết đã xuất bản trong khoảng thời gian được chọn.</p>
+        </div>
+        <form class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" @submit.prevent="loadLowViewAuthors">
+          <label class="text-sm font-medium text-gray-700">
+            Từ ngày
+            <input v-model="lowAuthorStartInput" type="date" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+          </label>
+          <label class="text-sm font-medium text-gray-700">
+            Đến ngày
+            <input v-model="lowAuthorEndInput" type="date" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+          </label>
+          <button type="submit" class="self-end rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300" :disabled="lowAuthorsLoading">
+            {{ lowAuthorsLoading ? 'Đang tải...' : 'Xem' }}
+          </button>
+        </form>
+      </div>
+
+      <div v-if="lowAuthorsError" class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ lowAuthorsError }}</div>
+      <div v-else-if="lowAuthorsLoading" class="mt-6 flex h-80 items-center justify-center text-sm text-gray-500">Đang tải biểu đồ...</div>
+      <div v-else-if="lowViewAuthors.length === 0" class="mt-6 flex h-80 items-center justify-center rounded-lg border border-dashed border-gray-200 text-sm text-gray-500">
+        Không có dữ liệu lượt xem trong khoảng thời gian này.
+      </div>
+      <div v-else class="mt-6 h-80">
+        <Bar :data="lowAuthorChartData" :options="lowAuthorChartOptions" />
+      </div>
+    </div>
+
     <div v-if="auth.isAuthor && rejectedArticles.length > 0" class="rounded-xl border border-red-100 bg-white p-6 shadow-sm">
       <div class="mb-4 flex items-center justify-between">
         <div>
@@ -125,6 +156,7 @@ import { FileText, Eye, DollarSign, TrendingUp } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate } from '@/api/articles'
 import { fetchAdminVipPackages, fetchManageableArticles, fetchPendingArticles, fetchVisibilityArticles, type AdminVipPackage, type StaffArticleDto } from '@/api/staff'
+import { fetchAdminTopStats, type AdminTopStatDto } from '@/api/stats'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend)
 
@@ -133,6 +165,11 @@ const articles = ref<StaffArticleDto[]>([])
 const vipPackages = ref<AdminVipPackage[]>([])
 const loading = ref(true)
 const error = ref('')
+const lowViewAuthors = ref<AdminTopStatDto[]>([])
+const lowAuthorsLoading = ref(false)
+const lowAuthorsError = ref('')
+const lowAuthorStartInput = ref(formatDateInput(addDays(new Date(), -30)))
+const lowAuthorEndInput = ref(formatDateInput(new Date()))
 
 onMounted(loadDashboard)
 
@@ -204,6 +241,18 @@ const lineChartData = computed(() => ({
   }],
 }))
 
+const lowAuthorChartData = computed(() => ({
+  labels: lowViewAuthors.value.map(author => author.targetName || `Tác giả #${author.targetId}`),
+  datasets: [{
+    label: 'Lượt xem',
+    data: lowViewAuthors.value.map(author => author.views),
+    backgroundColor: '#60A5FA',
+    borderColor: '#2563EB',
+    borderWidth: 1,
+    borderRadius: 4,
+  }],
+}))
+
 const barChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -224,6 +273,32 @@ const lineChartOptions = {
   },
 }
 
+const lowAuthorChartOptions = {
+  indexAxis: 'y' as const,
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        afterLabel: (context: any) => {
+          const author = lowViewAuthors.value[context.dataIndex]
+          if (!author) return ''
+          return `Bài viết: ${author.articles.toLocaleString('vi-VN')} | Doanh thu: ${author.revenue.toLocaleString('vi-VN')}đ`
+        },
+      },
+    },
+  },
+  scales: {
+    x: {
+      beginAtZero: true,
+      ticks: { precision: 0 },
+      grid: { color: '#E5E7EB' },
+    },
+    y: { grid: { display: false } },
+  },
+}
+
 async function loadDashboard() {
   loading.value = true
   error.value = ''
@@ -238,6 +313,7 @@ async function loadDashboard() {
       ])
       articles.value = dedupeArticles([...pendingArticles, ...visibilityArticles])
       vipPackages.value = vipPackageList
+      await loadLowViewAuthors()
     } else if (auth.isCensor) {
       articles.value = await fetchPendingArticles()
     } else {
@@ -250,8 +326,57 @@ async function loadDashboard() {
   }
 }
 
+async function loadLowViewAuthors() {
+  if (!auth.isAdmin) {
+    lowViewAuthors.value = []
+    return
+  }
+
+  lowAuthorsError.value = ''
+  if (!lowAuthorStartInput.value || !lowAuthorEndInput.value) {
+    lowAuthorsError.value = 'Vui lòng chọn đầy đủ khoảng thời gian.'
+    lowViewAuthors.value = []
+    return
+  }
+  if (lowAuthorStartInput.value > lowAuthorEndInput.value) {
+    lowAuthorsError.value = 'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.'
+    lowViewAuthors.value = []
+    return
+  }
+
+  lowAuthorsLoading.value = true
+  try {
+    lowViewAuthors.value = await fetchAdminTopStats({
+      targetType: 'author',
+      sortBy: 'views',
+      sortDirection: 'asc',
+      startDate: lowAuthorStartInput.value,
+      endDate: lowAuthorEndInput.value,
+      limit: 5,
+    })
+  } catch (err: any) {
+    lowAuthorsError.value = err?.response?.data?.message ?? 'Không thể tải thống kê tác giả có view thấp nhất.'
+    lowViewAuthors.value = []
+  } finally {
+    lowAuthorsLoading.value = false
+  }
+}
+
 function dedupeArticles(list: StaffArticleDto[]) {
   return list.filter((article, index, all) => all.findIndex(candidate => candidate.id === article.id) === index)
+}
+
+function addDays(date: Date, days: number) {
+  const result = new Date(date)
+  result.setDate(result.getDate() + days)
+  return result
+}
+
+function formatDateInput(date: Date) {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function statusLabel(status: 'DRAFT' | 'PENDING' | 'PUBLISHED' | 'REJECTED' | 'HIDDEN') {

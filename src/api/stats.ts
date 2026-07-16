@@ -42,6 +42,7 @@ export interface AuthorStatDto {
 export type StatGroupBy = 'hour' | 'day' | 'month'
 export type AdminTopTarget = 'author' | 'category'
 export type AdminTopSort = 'revenue' | 'views'
+export type AdminTopDirection = 'asc' | 'desc'
 
 export interface StatOptionDto {
   id: number
@@ -127,6 +128,8 @@ export async function fetchAdminStatAuthors() {
   return response.data
 }
 
+export const fetchAdminAuthorOptions = fetchAdminStatAuthors
+
 export async function fetchAdminOverviewStats(params: {
   authorId?: number | null
   categoryId?: number | null
@@ -144,6 +147,7 @@ export async function fetchAdminOverviewStats(params: {
 export async function fetchAdminTopStats(params: {
   targetType: AdminTopTarget
   sortBy: AdminTopSort
+  sortDirection?: AdminTopDirection
   startDate: string
   endDate: string
   limit: number
