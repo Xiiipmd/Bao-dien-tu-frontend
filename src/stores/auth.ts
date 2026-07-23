@@ -41,6 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
     name: string
     password: string
     confirmation: string
+    role?: 'MEMBER' | 'AUTHOR'
   }) {
     await api.post('/api/auth/register', payload)
   }

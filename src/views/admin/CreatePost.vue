@@ -83,6 +83,22 @@
             placeholder="https://example.com/cover-image.jpg"
             class="mt-3 w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
+          <p v-if="coverPreviewError" class="mt-2 text-sm text-red-600">{{ coverPreviewError }}</p>
+          <div v-else-if="coverPreviewUrl" class="mt-3 overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50">
+            <div class="relative aspect-[16/9] bg-gray-100">
+              <img
+                :src="coverPreviewUrl"
+                alt="Xem trước ảnh bìa"
+                class="h-full w-full object-cover"
+                @load="handleCoverImageLoad"
+                @error="handleCoverImageError"
+              />
+              <div class="absolute bottom-3 left-3 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow">
+                Ảnh bìa hợp lệ
+              </div>
+            </div>
+            <p class="px-4 py-2 text-sm text-emerald-700">Đã nhận link ảnh. Ảnh này sẽ được dùng làm ảnh bìa.</p>
+          </div>
         </div>
 
         <div>
@@ -118,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { Upload, Save, Send } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -135,6 +151,8 @@ const submitting = ref(false)
 const pageLoading = ref(false)
 const rejectionReason = ref('')
 const editingArticleStatus = ref<string | null>(null)
+const coverPreviewUrl = ref('')
+const coverPreviewError = ref('')
 
 const articleId = computed(() => {
   const rawValue = route.params.articleId
@@ -153,6 +171,30 @@ const form = reactive({
 })
 
 onMounted(loadPageData)
+
+watch(
+  () => form.coverImage,
+  (value) => {
+    const imageUrl = value.trim()
+    coverPreviewUrl.value = ''
+    coverPreviewError.value = ''
+
+    if (!imageUrl) {
+      return
+    }
+
+    try {
+      const parsedUrl = new URL(imageUrl)
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        coverPreviewError.value = 'Link ảnh phải bắt đầu bằng http:// hoặc https://.'
+        return
+      }
+      coverPreviewUrl.value = imageUrl
+    } catch {
+      coverPreviewError.value = 'Link ảnh không hợp lệ. Hãy dán URL đầy đủ của ảnh.'
+    }
+  },
+)
 
 async function loadPageData() {
   pageLoading.value = true
@@ -206,6 +248,11 @@ async function handlePublish() {
     return
   }
 
+  if (coverPreviewError.value) {
+    formError.value = coverPreviewError.value
+    return
+  }
+
   submitting.value = true
   try {
     if (isEditing.value && articleId.value) {
@@ -255,6 +302,14 @@ function resetForm() {
     excerpt: '',
     content: '',
   })
+}
+
+function handleCoverImageLoad() {
+  coverPreviewError.value = ''
+}
+
+function handleCoverImageError() {
+  coverPreviewError.value = 'Không tải được ảnh từ link này. Hãy thử mở link trong tab mới hoặc dùng link ảnh khác.'
 }
 
 async function handleCancelEdit() {
