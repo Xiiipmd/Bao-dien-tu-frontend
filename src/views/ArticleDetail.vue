@@ -5,7 +5,7 @@
     <template v-else-if="article">
     <div class="grid grid-cols-1 gap-12 lg:grid-cols-12">
       <!-- Main Content -->
-      <div class="lg:col-span-8">
+      <div class="lg:col-span-10 lg:col-start-2">
         <header class="mb-8">
           <div class="mb-4 flex items-center gap-2">
             <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800 uppercase tracking-wider">
@@ -194,6 +194,33 @@
           </template>
         </div>
 
+        <section v-if="relatedArticles.length" class="mt-12 border-t border-gray-200 pt-8">
+          <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 class="text-2xl font-bold text-gray-900">Bài viết liên quan</h3>
+              <p class="mt-1 text-sm text-gray-500">Các bài viết cùng chuyên mục {{ article.categoryName }}</p>
+            </div>
+          </div>
+
+          <div class="grid gap-5 md:grid-cols-2">
+            <RouterLink
+              v-for="related in relatedArticles"
+              :key="related.id"
+              :to="`/article/${related.id}`"
+              class="group flex gap-4 rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition hover:border-blue-100 hover:shadow-md"
+            >
+              <div class="h-24 w-32 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                <img :src="related.image" :alt="related.title" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+              </div>
+              <div class="flex min-w-0 flex-1 flex-col justify-center">
+                <span class="mb-2 text-xs font-semibold uppercase text-blue-600">{{ related.category }}</span>
+                <h4 class="mb-2 text-base font-bold leading-tight text-gray-900 group-hover:text-blue-600 line-clamp-2">{{ related.title }}</h4>
+                <span class="text-xs text-gray-500">{{ related.date }}</span>
+              </div>
+            </RouterLink>
+          </div>
+        </section>
+
         <!-- Comment Section -->
         <section class="mt-16 pt-8 border-t border-gray-200">
           <h3 class="mb-8 text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -234,29 +261,6 @@
           </div>
         </section>
       </div>
-
-      <!-- Sidebar -->
-      <aside class="lg:col-span-4">
-        <div class="sticky top-24 rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-          <h3 class="mb-6 text-lg font-bold text-gray-900 border-b border-gray-100 pb-4">Bài viết liên quan</h3>
-          <div class="space-y-6">
-            <RouterLink
-              v-for="related in relatedArticles"
-              :key="related.id"
-              :to="`/article/${related.id}`"
-              class="group flex gap-4"
-            >
-              <div class="h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-                <img :src="related.image" :alt="related.title" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
-              </div>
-              <div class="flex flex-1 flex-col justify-center">
-                <h4 class="mb-1 text-sm font-bold leading-tight text-gray-900 group-hover:text-blue-600 line-clamp-2">{{ related.title }}</h4>
-                <span class="text-xs text-gray-500">{{ related.date }}</span>
-              </div>
-            </RouterLink>
-          </div>
-        </div>
-      </aside>
     </div>
     </template>
   </div>
@@ -291,6 +295,7 @@ import {
   type ArticleCardViewModel,
   type ArticleCommentViewModel,
   type ArticleDetailViewModel,
+  type ArticleSearchResponse,
 } from '@/api/articles'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
@@ -585,10 +590,7 @@ async function loadArticle() {
     ])
     const articleSummary = allArticles.find(candidate => candidate.id === articleIdNumber.value)
 
-    relatedArticles.value = allArticles
-      .filter(candidate => candidate.id !== articleIdNumber.value)
-      .slice(0, 4)
-      .map(toArticleCardViewModel)
+    relatedArticles.value = []
     comments.value = commentList.map(toArticleCommentViewModel)
 
     try {
@@ -607,6 +609,7 @@ async function loadArticle() {
       article.value = toArticleDetailViewModel(readArticle)
       articlePublishedAt.value = readArticle.createdAt ?? ''
       articleHtml.value = readArticle.content
+      relatedArticles.value = buildRelatedArticles(allArticles, article.value.categoryName, article.value.id)
       previewMode.value = false
       nonVipNotice.value = readArticle.accessMessage ?? ''
     } catch (err: any) {
@@ -635,6 +638,7 @@ async function loadArticle() {
       }
       articlePublishedAt.value = ''
       articleHtml.value = renderPreviewHtml(previewArticle.previewContent)
+      relatedArticles.value = buildRelatedArticles(allArticles, article.value.categoryName, article.value.id)
       previewMode.value = true
       nonVipNotice.value = err?.response?.data?.message ?? 'Bạn cần VIP để đọc tiếp nội dung đầy đủ.'
     }
@@ -647,6 +651,27 @@ async function loadArticle() {
   } finally {
     loading.value = false
   }
+}
+
+function buildRelatedArticles(
+  allArticles: ArticleSearchResponse[],
+  categoryName: string,
+  currentArticleId: number,
+) {
+  const normalizedCategory = normalizeCategoryName(categoryName)
+  if (!normalizedCategory) {
+    return []
+  }
+
+  return allArticles
+    .filter(candidate => candidate.id !== currentArticleId)
+    .filter(candidate => normalizeCategoryName(candidate.categoryName) === normalizedCategory)
+    .slice(0, 4)
+    .map(toArticleCardViewModel)
+}
+
+function normalizeCategoryName(value?: string | null) {
+  return (value ?? '').trim().toLocaleLowerCase('vi-VN')
 }
 
 function resolveStatsRange() {

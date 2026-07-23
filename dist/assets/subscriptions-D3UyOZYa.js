@@ -1,0 +1,1 @@
+import{H as a}from"./index-B1pLLb2M.js";async function e(){return(await a.get("/api/subscriptions/my")).data}async function r(s,t){return(await a.post("/api/subscriptions",{targetType:s,targetId:t})).data}async function o(s,t){await a.delete(`/api/subscriptions/${s}/${t}`)}export{e as f,r as s,o as u};

@@ -8,6 +8,27 @@
 
       <form @submit.prevent="handleSubmit" class="space-y-5">
         <div>
+          <label class="mb-2 block text-sm font-medium text-gray-700">Loại tài khoản</label>
+          <div class="grid grid-cols-2 gap-2 rounded-lg bg-gray-100 p-1">
+            <button
+              type="button"
+              :class="['rounded-md px-3 py-2 text-sm font-semibold transition-colors', form.role === 'MEMBER' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600 hover:text-gray-900']"
+              @click="form.role = 'MEMBER'"
+            >
+              Độc giả
+            </button>
+            <button
+              type="button"
+              :class="['rounded-md px-3 py-2 text-sm font-semibold transition-colors', form.role === 'AUTHOR' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600 hover:text-gray-900']"
+              @click="form.role = 'AUTHOR'"
+            >
+              Tác giả
+            </button>
+          </div>
+          <p class="mt-1.5 text-xs text-gray-500">Tài khoản tác giả có thể vào trang quản trị để tạo và quản lý bài viết.</p>
+        </div>
+
+        <div>
           <label class="mb-2 block text-sm font-medium text-gray-700">Họ và tên</label>
           <div class="relative">
             <User class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
@@ -98,7 +119,13 @@ const auth = useAuthStore()
 const showPassword = ref(false)
 const loading = ref(false)
 const serverError = ref('')
-const form = reactive({ name: '', email: '', password: '', confirmation: '' })
+const form = reactive<{ name: string; email: string; password: string; confirmation: string; role: 'MEMBER' | 'AUTHOR' }>({
+  name: '',
+  email: '',
+  password: '',
+  confirmation: '',
+  role: 'MEMBER',
+})
 const errors = reactive<Record<string, string>>({})
 
 async function handleSubmit() {
@@ -123,6 +150,7 @@ async function handleSubmit() {
       name: form.name,
       password: form.password,
       confirmation: form.confirmation,
+      role: form.role,
     })
     router.push('/login')
   } catch (err: any) {
