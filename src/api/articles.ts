@@ -119,6 +119,11 @@ export async function fetchHomeArticles() {
   return response.data
 }
 
+export async function fetchTrendingArticles() {
+  const response = await api.get<ArticleSearchResponse[]>('/api/articles/trending')
+  return response.data
+}
+
 export async function fetchCategories() {
   const response = await api.get<CategoryOption[]>('/api/categories')
   return response.data

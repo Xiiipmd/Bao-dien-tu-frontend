@@ -78,7 +78,10 @@
         <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
           <h3 class="mb-6 text-lg font-bold text-gray-900 flex items-center gap-2">
             <TrendingUp class="h-5 w-5 text-blue-600" />
-            Bài viết nổi bật
+            <span>
+              Bài viết nổi bật
+              <span class="mt-0.5 block text-xs font-medium text-gray-400">3 ngày gần nhất</span>
+            </span>
           </h3>
           <div class="space-y-6">
             <RouterLink
@@ -107,12 +110,19 @@
 import { computed, onMounted, ref } from 'vue'
 import { ArrowRight, ChevronRight, Sparkles, TrendingUp } from 'lucide-vue-next'
 import ArticleCard from '@/components/ArticleCard.vue'
-import { fetchCategories, fetchHomeArticles, toArticleCardViewModel, type ArticleCardViewModel } from '@/api/articles'
+import {
+  fetchCategories,
+  fetchHomeArticles,
+  fetchTrendingArticles,
+  toArticleCardViewModel,
+  type ArticleCardViewModel,
+} from '@/api/articles'
 import { fetchPreferences } from '@/api/personalization'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const articles = ref<ArticleCardViewModel[]>([])
+const trendingArticles = ref<ArticleCardViewModel[]>([])
 const categories = ref<string[]>([])
 const loading = ref(true)
 const error = ref('')
@@ -120,7 +130,6 @@ const isPersonalized = ref(false)
 
 const featuredArticle = computed(() => articles.value[0] ?? null)
 const gridArticles = computed(() => articles.value.slice(1, 5))
-const trendingArticles = computed(() => articles.value.slice(0, 3))
 
 onMounted(loadArticles)
 
@@ -129,10 +138,11 @@ async function loadArticles() {
   error.value = ''
   try {
     const articleRequest = fetchHomeArticles()
-    const [articleResult, categoryResult, preferenceResult] = await Promise.allSettled([
+    const [articleResult, categoryResult, preferenceResult, trendingResult] = await Promise.allSettled([
       articleRequest,
       fetchCategories(),
       auth.isLoggedIn ? fetchPreferences() : Promise.resolve(null),
+      fetchTrendingArticles(),
     ])
 
     if (articleResult.status === 'rejected') {
@@ -140,6 +150,9 @@ async function loadArticles() {
     }
 
     articles.value = articleResult.value.map(toArticleCardViewModel)
+    trendingArticles.value = trendingResult.status === 'fulfilled'
+      ? trendingResult.value.map(toArticleCardViewModel)
+      : []
     isPersonalized.value = preferenceResult.status === 'fulfilled'
       && Boolean(preferenceResult.value?.selectedTopics.length)
 
