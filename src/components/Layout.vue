@@ -51,11 +51,23 @@
 
           <div class="flex items-center gap-3">
             <template v-if="auth.isLoggedIn">
-              <div class="hidden md:flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5">
+              <NotificationBell />
+              <RouterLink
+                to="/preferences"
+                class="hidden rounded-full p-2 text-gray-600 transition hover:bg-blue-50 hover:text-blue-700 md:flex"
+                title="Cá nhân hóa chủ đề"
+              >
+                <Settings2 class="h-5 w-5" />
+              </RouterLink>
+              <RouterLink
+                to="/account"
+                class="hidden items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 transition hover:border-blue-200 hover:bg-blue-50 md:flex"
+                title="Thông tin tài khoản"
+              >
                 <User class="h-4 w-4 text-gray-500" />
                 <span class="text-sm font-semibold text-gray-700">{{ auth.userName }}</span>
                 <Crown v-if="auth.isVip" class="h-4 w-4 text-amber-500" title="Thành viên VIP" />
-              </div>
+              </RouterLink>
               <button
                 @click="handleLogout"
                 class="hidden md:flex items-center justify-center p-2 text-gray-600 hover:text-red-600 rounded-full bg-gray-50 hover:bg-red-50 transition-colors"
@@ -117,6 +129,20 @@
                         <span class="font-semibold text-gray-700">{{ auth.userName }}</span>
                         <Crown v-if="auth.isVip" class="h-5 w-5 text-amber-500" title="Thành viên VIP" />
                       </div>
+                      <RouterLink
+                        to="/account"
+                        class="flex items-center gap-2 rounded px-2 py-2 font-semibold text-gray-700 hover:bg-gray-100"
+                        @click="drawerOpen = false"
+                      >
+                        <User class="h-5 w-5" /> Tài khoản của tôi
+                      </RouterLink>
+                      <RouterLink
+                        to="/preferences"
+                        class="flex items-center gap-2 rounded px-2 py-2 font-semibold text-blue-700 hover:bg-blue-50"
+                        @click="drawerOpen = false"
+                      >
+                        <Settings2 class="h-5 w-5" /> Chủ đề &amp; thông báo
+                      </RouterLink>
                       <button @click="handleLogout(); drawerOpen = false" class="w-full py-2 px-2 rounded text-left text-red-600 hover:bg-red-50 flex items-center gap-2">
                         <LogOut class="h-5 w-5" /> Đăng xuất
                       </button>
@@ -180,9 +206,10 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Search, Crown, Menu, User, LogOut } from 'lucide-vue-next'
+import { Search, Crown, Menu, User, LogOut, Settings2 } from 'lucide-vue-next'
 import { fetchCategories } from '@/api/articles'
 import { useAuthStore } from '@/stores/auth'
+import NotificationBell from '@/components/NotificationBell.vue'
 
 const router = useRouter()
 const route = useRoute()

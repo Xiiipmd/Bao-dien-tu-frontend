@@ -114,6 +114,11 @@ export async function fetchPublicArticles(filters: ArticleSearchFilters = {}) {
   return response.data
 }
 
+export async function fetchHomeArticles() {
+  const response = await api.get<ArticleSearchResponse[]>('/api/articles/home')
+  return response.data
+}
+
 export async function fetchCategories() {
   const response = await api.get<CategoryOption[]>('/api/categories')
   return response.data

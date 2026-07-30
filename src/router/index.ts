@@ -26,6 +26,16 @@ export const router = createRouter({
           meta: { requiresAuth: true } satisfies AppRouteMeta,
         },
         { path: 'search', component: () => import('@/views/Search.vue') },
+        {
+          path: 'preferences',
+          component: () => import('@/views/Preferences.vue'),
+          meta: { requiresAuth: true } satisfies AppRouteMeta,
+        },
+        {
+          path: 'account',
+          component: () => import('@/views/Account.vue'),
+          meta: { requiresAuth: true } satisfies AppRouteMeta,
+        },
       ],
     },
     {

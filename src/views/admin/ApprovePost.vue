@@ -80,11 +80,13 @@
 
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { User, Calendar, CheckCircle, XCircle, FileText } from 'lucide-vue-next'
 import { formatDate } from '@/api/articles'
 import { fetchPendingArticleDetail, fetchPendingArticles, moderateArticle, type StaffArticleDto } from '@/api/staff'
 
 const pendingPosts = ref<StaffArticleDto[]>([])
+const route = useRoute()
 const selectedPostId = ref<number | null>(null)
 const selectedPost = ref<StaffArticleDto | null>(null)
 const showRejectModal = ref(false)
@@ -95,6 +97,11 @@ const actionLoading = ref(false)
 const actionError = ref('')
 
 onMounted(loadPendingPosts)
+
+watch(
+  () => route.query.articleId,
+  selectArticleFromNotification,
+)
 
 watch(selectedPostId, async (articleId) => {
   if (!articleId) {
@@ -114,12 +121,23 @@ async function loadPendingPosts() {
   error.value = ''
   try {
     pendingPosts.value = await fetchPendingArticles()
-    selectedPostId.value = pendingPosts.value[0]?.id ?? null
+    if (!selectArticleFromNotification(route.query.articleId)) {
+      selectedPostId.value = pendingPosts.value[0]?.id ?? null
+    }
   } catch (err: any) {
     error.value = err?.response?.data?.message ?? 'Không thể tải danh sách chờ duyệt.'
   } finally {
     loading.value = false
   }
+}
+
+function selectArticleFromNotification(rawArticleId: unknown) {
+  const articleId = Number(rawArticleId)
+  if (!Number.isInteger(articleId) || !pendingPosts.value.some(post => post.id === articleId)) {
+    return false
+  }
+  selectedPostId.value = articleId
+  return true
 }
 
 async function handleApprove() {

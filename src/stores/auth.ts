@@ -50,6 +50,11 @@ export const useAuthStore = defineStore('auth', () => {
     clearSession()
   }
 
+  function updateUserName(name: string) {
+    userName.value = name
+    localStorage.setItem('user_name', name)
+  }
+
   function clearSession() {
     token.value = null
     userName.value = null
@@ -75,6 +80,7 @@ export const useAuthStore = defineStore('auth', () => {
     isStaff,
     login,
     register,
+    updateUserName,
     logout,
   }
 })

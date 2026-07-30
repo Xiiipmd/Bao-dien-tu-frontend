@@ -38,7 +38,12 @@
       <!-- Left Column: Article Grid -->
       <div class="lg:col-span-8">
         <div class="mb-6 flex items-center justify-between">
-          <h2 class="text-2xl font-bold text-gray-900">Tin mới nhất</h2>
+          <div>
+            <span v-if="isPersonalized" class="mb-1 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-blue-600">
+              <Sparkles class="h-3.5 w-3.5" /> Dành riêng cho bạn
+            </span>
+            <h2 class="text-2xl font-bold text-gray-900">{{ isPersonalized ? 'Tin theo sở thích' : 'Tin mới nhất' }}</h2>
+          </div>
           <RouterLink to="/search" class="text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1">
             Xem tất cả <ChevronRight class="h-4 w-4" />
           </RouterLink>
@@ -100,14 +105,18 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ArrowRight, ChevronRight, TrendingUp } from 'lucide-vue-next'
+import { ArrowRight, ChevronRight, Sparkles, TrendingUp } from 'lucide-vue-next'
 import ArticleCard from '@/components/ArticleCard.vue'
-import { fetchCategories, fetchPublicArticles, toArticleCardViewModel, type ArticleCardViewModel } from '@/api/articles'
+import { fetchCategories, fetchHomeArticles, toArticleCardViewModel, type ArticleCardViewModel } from '@/api/articles'
+import { fetchPreferences } from '@/api/personalization'
+import { useAuthStore } from '@/stores/auth'
 
+const auth = useAuthStore()
 const articles = ref<ArticleCardViewModel[]>([])
 const categories = ref<string[]>([])
 const loading = ref(true)
 const error = ref('')
+const isPersonalized = ref(false)
 
 const featuredArticle = computed(() => articles.value[0] ?? null)
 const gridArticles = computed(() => articles.value.slice(1, 5))
@@ -119,9 +128,11 @@ async function loadArticles() {
   loading.value = true
   error.value = ''
   try {
-    const [articleResult, categoryResult] = await Promise.allSettled([
-      fetchPublicArticles(),
+    const articleRequest = fetchHomeArticles()
+    const [articleResult, categoryResult, preferenceResult] = await Promise.allSettled([
+      articleRequest,
       fetchCategories(),
+      auth.isLoggedIn ? fetchPreferences() : Promise.resolve(null),
     ])
 
     if (articleResult.status === 'rejected') {
@@ -129,6 +140,8 @@ async function loadArticles() {
     }
 
     articles.value = articleResult.value.map(toArticleCardViewModel)
+    isPersonalized.value = preferenceResult.status === 'fulfilled'
+      && Boolean(preferenceResult.value?.selectedTopics.length)
 
     if (categoryResult.status === 'fulfilled') {
       categories.value = categoryResult.value.map(category => category.name)

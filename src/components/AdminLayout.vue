@@ -39,6 +39,14 @@
       <header class="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-8 shadow-sm">
         <h1 class="text-xl font-semibold text-gray-800">{{ currentLabel }}</h1>
         <div class="flex items-center gap-4">
+          <NotificationBell />
+          <RouterLink
+            to="/account"
+            class="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+          >
+            <UserRound class="h-4 w-4" />
+            {{ auth.userName }}
+          </RouterLink>
           <div class="relative">
             <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
@@ -62,8 +70,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { LayoutDashboard, FileText, CheckSquare, Crown, LogOut, Search, TrendingUp } from 'lucide-vue-next'
+import { LayoutDashboard, FileText, CheckSquare, Crown, LogOut, Search, TrendingUp, UserRound } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
+import NotificationBell from '@/components/NotificationBell.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
