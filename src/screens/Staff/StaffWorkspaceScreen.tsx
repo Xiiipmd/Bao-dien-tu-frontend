@@ -13,10 +13,19 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { apiClient } from '../../services/api/client';
 import { useAppStore } from '../../store/useAppStore';
-import { Article, ArticleStatus } from '../../types/content';
+import {
+  Article,
+  ArticleStatus,
+  AuthorStatsSummary,
+} from '../../types/content';
 import AppActionSheet from '../../components/Feedback/AppActionSheet';
 import StaffHeader from './StaffHeader';
-import { formatStaffDate, STAFF_COLORS, STATUS_META } from './staffUi';
+import {
+  formatStaffDate,
+  formatStaffMoney,
+  STAFF_COLORS,
+  STATUS_META,
+} from './staffUi';
 
 const F_SERIF = Platform.select({
   ios: 'Georgia',
@@ -38,6 +47,7 @@ export default function StaffWorkspaceScreen({ navigation }: any) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [pending, setPending] = useState<Article[]>([]);
   const [visibility, setVisibility] = useState<Article[]>([]);
+  const [authorStats, setAuthorStats] = useState<AuthorStatsSummary | null>(null);
   const [filter, setFilter] = useState<'ALL' | ArticleStatus>('ALL');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -59,8 +69,17 @@ export default function StaffWorkspaceScreen({ navigation }: any) {
     setError('');
     try {
       if (user.role === 'AUTHOR') {
-        const response = await apiClient.getStaffArticles();
-        setArticles(response.data);
+        const [articlesResult, statsResult] = await Promise.allSettled([
+          apiClient.getStaffArticles(),
+          apiClient.getAuthorStats(user.id),
+        ]);
+        if (articlesResult.status === 'rejected') {
+          throw articlesResult.reason;
+        }
+        setArticles(articlesResult.value.data);
+        setAuthorStats(
+          statsResult.status === 'fulfilled' ? statsResult.value.data : null
+        );
       } else if (user.role === 'ADMIN') {
         const [allResult, pendingResult, visibilityResult] =
           await Promise.allSettled([
@@ -291,6 +310,40 @@ export default function StaffWorkspaceScreen({ navigation }: any) {
                   bordered
                 />
                 <Metric value={totalViews} label="Lượt đọc" colors={colors} bordered />
+              </View>
+
+              <View
+                style={[
+                  styles.revenueCard,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
+              >
+                <View style={styles.revenueHeader}>
+                  <View>
+                    <Text style={[styles.eyebrow, { color: colors.primary }]}>
+                      HIỆU QUẢ 30 NGÀY
+                    </Text>
+                    <Text style={[styles.revenueLabel, { color: colors.textMuted }]}>
+                      Doanh thu ước tính
+                    </Text>
+                  </View>
+                  <Text style={[styles.revenueValue, { color: colors.text }]}>
+                    {formatStaffMoney(authorStats?.totalRevenue || 0)}
+                  </Text>
+                </View>
+                <View
+                  style={[styles.revenueDivider, { backgroundColor: colors.border }]}
+                />
+                <View style={styles.revenueMeta}>
+                  <Text style={[styles.revenueMetaText, { color: colors.textMuted }]}>
+                    {authorStats?.totalViews || 0} lượt đọc ·{' '}
+                    {authorStats?.totalArticles || 0} bài xuất bản
+                  </Text>
+                  <Text style={[styles.revenueRate, { color: colors.textMuted }]}>
+                    Thường {formatStaffMoney(authorStats?.freeViewPrice || 0)}/lượt · VIP{' '}
+                    {formatStaffMoney(authorStats?.vipViewPrice || 0)}/lượt
+                  </Text>
+                </View>
               </View>
 
               <TouchableOpacity
@@ -555,6 +608,29 @@ const styles = StyleSheet.create({
   metric: { flex: 1, paddingVertical: 16, paddingHorizontal: 12 },
   metricValue: { fontFamily: F_SERIF, fontSize: 22, fontWeight: '700' },
   metricLabel: { marginTop: 3, fontSize: 10, fontWeight: '600' },
+  revenueCard: {
+    marginHorizontal: 20,
+    marginTop: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  revenueHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  revenueLabel: { marginTop: 5, fontSize: 11, fontWeight: '600' },
+  revenueValue: {
+    fontFamily: F_SERIF,
+    fontSize: 25,
+    lineHeight: 29,
+    fontWeight: '700',
+  },
+  revenueDivider: { height: 1, marginVertical: 13 },
+  revenueMeta: { gap: 4 },
+  revenueMetaText: { fontSize: 11, fontWeight: '700' },
+  revenueRate: { fontSize: 10, lineHeight: 15 },
   primaryCta: {
     height: 48,
     marginHorizontal: 20,

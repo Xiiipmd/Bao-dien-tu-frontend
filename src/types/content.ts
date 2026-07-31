@@ -61,6 +61,15 @@ export interface AdminUser {
   createdAt: string;
 }
 
+export interface AuthorStatsSummary {
+  totalArticles: number;
+  totalViews: number;
+  totalRevenue: number;
+  totalFollowers: number;
+  freeViewPrice: number;
+  vipViewPrice: number;
+}
+
 export interface Comment {
   id: number;
   articleId: number;

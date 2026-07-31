@@ -53,6 +53,9 @@ export const formatStaffDate = (value?: string) => {
   return new Date(value).toLocaleDateString('vi-VN');
 };
 
+export const formatStaffMoney = (value: number) =>
+  `${Math.max(0, Math.round(value)).toLocaleString('vi-VN')}đ`;
+
 export const stripArticleHtml = (value: string) =>
   value
     .replace(/<br\s*\/?>/gi, '\n')

@@ -9,6 +9,7 @@ import {
   UserPreferences,
   StaffArticleInput,
   AdminUser,
+  AuthorStatsSummary,
 } from '../../types/content';
 import { useAppStore, UserSession } from '../../store/useAppStore';
 import { clearStoredSession } from '../sessionStorage';
@@ -721,6 +722,44 @@ export const apiClient = {
     } catch (e: any) {
       throw new Error(
         e.response?.data?.message || e.message || 'Không thể đổi trạng thái bài'
+      );
+    }
+  },
+
+  getAuthorStats: async (
+    authorId: number,
+    days = 30
+  ): Promise<ApiResponse<AuthorStatsSummary>> => {
+    try {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - Math.max(1, days - 1));
+      const formatDate = (value: Date) =>
+        value.toISOString().slice(0, 10).replace(/-/g, '');
+      const res = await api.get('/api/stats/author', {
+        params: {
+          authorId,
+          startDate: formatDate(start),
+          endDate: formatDate(end),
+          groupBy: 'day',
+        },
+      });
+      return {
+        data: {
+          totalArticles: Number(res.data.totalArticles || 0),
+          totalViews: Number(res.data.totalViews || 0),
+          totalRevenue: Number(res.data.totalRevenue || 0),
+          totalFollowers: Number(res.data.totalFollowers || 0),
+          freeViewPrice: Number(res.data.freeViewPrice || 0),
+          vipViewPrice: Number(res.data.vipViewPrice || 0),
+        },
+        status: res.status,
+      };
+    } catch (e: any) {
+      throw new Error(
+        e.response?.data?.message ||
+          e.message ||
+          'Không thể tải thống kê doanh thu'
       );
     }
   },

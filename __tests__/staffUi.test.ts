@@ -1,4 +1,5 @@
 import {
+  formatStaffMoney,
   STATUS_META,
   stripArticleHtml,
   toArticleHtml,
@@ -21,5 +22,11 @@ describe('staff article helpers', () => {
     expect(STATUS_META.DRAFT.label).toBe('BẢN NHÁP');
     expect(STATUS_META.PENDING.label).toBe('CHỜ DUYỆT');
     expect(STATUS_META.REJECTED.label).toBe('CẦN SỬA');
+  });
+
+  it('formats estimated revenue in Vietnamese đồng', () => {
+    expect(formatStaffMoney(1400)).toContain('1');
+    expect(formatStaffMoney(1400)).toContain('400');
+    expect(formatStaffMoney(1400)).toMatch(/đ$/);
   });
 });
