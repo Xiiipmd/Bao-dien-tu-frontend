@@ -114,8 +114,8 @@ export async function fetchAuthorStats(
   const response = await api.get<AuthorStatDto>('/api/stats/author', {
     params: {
       authorId,
-      startDate,
-      endDate,
+      startDate: normalizeBackendDate(startDate),
+      endDate: normalizeBackendDate(endDate),
       groupBy,
     },
   })
@@ -138,7 +138,11 @@ export async function fetchAdminOverviewStats(params: {
   groupBy: StatGroupBy
 }) {
   const response = await api.get<AdminOverviewStatDto>('/api/stats/admin/overview', {
-    params: compactParams(params),
+    params: compactParams({
+      ...params,
+      startDate: normalizeBackendDate(params.startDate),
+      endDate: normalizeBackendDate(params.endDate),
+    }),
   })
 
   return response.data
@@ -153,7 +157,11 @@ export async function fetchAdminTopStats(params: {
   limit: number
 }) {
   const response = await api.get<AdminTopStatDto[]>('/api/stats/admin/top', {
-    params: compactParams(params),
+    params: compactParams({
+      ...params,
+      startDate: normalizeBackendDate(params.startDate),
+      endDate: normalizeBackendDate(params.endDate),
+    }),
   })
 
   return response.data
@@ -163,4 +171,8 @@ function compactParams(params: Record<string, string | number | null | undefined
   return Object.fromEntries(
     Object.entries(params).filter(([, value]) => value !== null && value !== undefined && value !== ''),
   )
+}
+
+function normalizeBackendDate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value.replace(/-/g, '') : value
 }

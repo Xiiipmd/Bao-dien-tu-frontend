@@ -1,0 +1,1 @@
+function h(n,i){const t=(n==null?void 0:n.trim())??"";return i===180&&/Gói VIP 180 ngày/i.test(t)&&t.includes("?")?"Gói VIP 180 ngày đọc báo không giới hạn và tóm tắt nhanh bằng AI. Tiết kiệm chi phí!":t}export{h as n};

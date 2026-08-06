@@ -1,10 +1,10 @@
 <template>
   <RouterLink :to="`/article/${article.id}`" class="group block overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-all hover:shadow-md">
     <div class="relative aspect-video overflow-hidden bg-gray-100">
-      <img
+      <CoverMedia
         :src="article.image"
         :alt="article.title"
-        class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        media-class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
       />
       <div v-if="article.isVip" class="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
         <Crown class="h-3 w-3" />
@@ -21,6 +21,7 @@
 
 <script setup lang="ts">
 import { Crown } from 'lucide-vue-next'
+import CoverMedia from '@/components/CoverMedia.vue'
 
 defineProps<{
   article: {

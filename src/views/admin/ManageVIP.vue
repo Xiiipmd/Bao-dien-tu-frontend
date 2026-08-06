@@ -25,7 +25,7 @@
             <td class="px-6 py-4">{{ pkg.durationDays }}</td>
             <td class="px-6 py-4 font-semibold text-amber-600">{{ pkg.price.toLocaleString('vi-VN') }}</td>
             <td class="px-6 py-4">{{ pkg.discountPercent ?? 0 }}%</td>
-            <td class="px-6 py-4 text-gray-500 max-w-xs truncate">{{ pkg.description }}</td>
+            <td class="px-6 py-4 text-gray-500 max-w-xs truncate">{{ normalizeVipDescription(pkg.description, pkg.durationDays) }}</td>
             <td class="px-6 py-4 text-right">
               <button @click="openEdit(pkg)" class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
                 <Pencil class="h-3 w-3" /> Sửa
@@ -82,6 +82,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { Pencil, Save } from 'lucide-vue-next'
 import { fetchAdminVipPackages, updateAdminVipPackage, type AdminVipPackage } from '@/api/staff'
+import { normalizeVipDescription } from '@/utils/vipText'
 
 const packages = ref<AdminVipPackage[]>([])
 const loading = ref(true)
@@ -103,7 +104,10 @@ onMounted(async () => {
 
 function openEdit(pkg: AdminVipPackage) {
   editingId.value = pkg.id
-  Object.assign(formData, { ...pkg })
+  Object.assign(formData, {
+    ...pkg,
+    description: normalizeVipDescription(pkg.description, pkg.durationDays),
+  })
   formModal.value = true
 }
 

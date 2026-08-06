@@ -6,7 +6,7 @@
     <div v-else>
       <!-- Cover Image -->
       <div class="relative h-64 w-full bg-slate-800">
-        <img :src="coverImage" alt="Cover" class="h-full w-full object-cover opacity-60" />
+        <CoverMedia :src="coverImage" alt="Cover" media-class="h-full w-full object-cover opacity-60" />
         <div class="absolute inset-0 pointer-events-none bg-linear-to-t from-gray-900/80 to-transparent" />
       </div>
       <div class="container mx-auto relative z-10 -mt-24 max-w-5xl px-4 lg:px-8">
@@ -54,6 +54,7 @@ import { useRoute } from 'vue-router'
 import { UserPlus } from 'lucide-vue-next'
 
 import ArticleCard from '@/components/ArticleCard.vue'
+import CoverMedia from '@/components/CoverMedia.vue'
 
 import {
   fetchPublicArticles,

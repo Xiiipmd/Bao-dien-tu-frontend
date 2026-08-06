@@ -9,3 +9,39 @@
     @apply antialiased text-gray-900 bg-white;
   }
 }
+
+/* Global dark theme, including existing Tailwind utility-based pages. */
+html.dark, html.dark body, html.dark #app { background: #0f172a; color: #e2e8f0; }
+html.dark .bg-white { background-color: #111827; }
+html.dark .bg-gray-50 { background-color: #0f172a; }
+html.dark .bg-gray-100 { background-color: #1e293b; }
+html.dark .text-gray-900 { color: #f8fafc; }
+html.dark .text-gray-700 { color: #cbd5e1; }
+html.dark .text-gray-600,
+html.dark .text-gray-500,
+html.dark .text-gray-400 { color: #94a3b8; }
+html.dark .border-gray-100 { border-color: #1e293b; }
+html.dark .border-gray-200,
+html.dark .border-gray-300 { border-color: #334155; }
+html.dark input, html.dark textarea, html.dark select {
+  border-color: #475569;
+  background-color: #1e293b;
+  color: #e2e8f0;
+}
+html.dark input::placeholder, html.dark textarea::placeholder { color: #64748b; }
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-100:hover { background-color: #1e293b; }
+html.dark .article-content,
+html.dark .article-content p,
+html.dark .article-content li { color: #cbd5e1; }
+html.dark .article-content h1,
+html.dark .article-content h2,
+html.dark .article-content h3,
+html.dark .article-content h4 { color: #f8fafc; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -56,6 +56,52 @@
           </div>
         </header>
 
+        <ArticleReader
+          class="mb-4"
+          :title="article.title"
+          :sapo="article.sapo"
+          :html="articleHtml"
+        />
+
+        <div class="article-tools mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+          <div class="flex items-center gap-2" aria-label="Điều chỉnh cỡ chữ bài viết">
+            <span class="mr-1 text-sm font-semibold text-gray-700">Cỡ chữ</span>
+            <button
+              type="button"
+              class="tool-button"
+              :disabled="articleFontSize <= 16"
+              title="Giảm cỡ chữ"
+              aria-label="Giảm cỡ chữ"
+              @click="changeFontSize(-2)"
+            >
+              <Minus class="h-4 w-4" /> <span class="text-xs font-bold">A</span>
+            </button>
+            <span class="min-w-10 text-center text-sm font-semibold text-gray-600">{{ articleFontSize }}px</span>
+            <button
+              type="button"
+              class="tool-button"
+              :disabled="articleFontSize >= 24"
+              title="Tăng cỡ chữ"
+              aria-label="Tăng cỡ chữ"
+              @click="changeFontSize(2)"
+            >
+              <Plus class="h-4 w-4" /> <span class="font-bold">A</span>
+            </button>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2" aria-label="Chia sẻ bài viết">
+            <span class="mr-1 hidden text-sm font-semibold text-gray-700 sm:inline">Chia sẻ</span>
+            <button type="button" class="share-button bg-[#1877f2] text-white" title="Chia sẻ lên Facebook" @click="shareTo('facebook')">FB</button>
+            <button type="button" class="share-button bg-[#0068ff] text-white" title="Chia sẻ qua Zalo" @click="shareTo('zalo')">Zalo</button>
+            <button type="button" class="share-button bg-gray-900 text-white" title="Chia sẻ lên X (Twitter)" @click="shareTo('twitter')">X</button>
+            <button type="button" class="tool-button px-3" title="Sao chép liên kết" @click="copyArticleLink">
+              <Check v-if="linkCopied" class="h-4 w-4 text-green-600" />
+              <Copy v-else class="h-4 w-4" />
+              <span>{{ linkCopied ? 'Đã sao chép' : 'Copy link' }}</span>
+            </button>
+          </div>
+        </div>
+
         <div class="mb-8">
           <div v-if="nonVipNotice" class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             {{ nonVipNotice }}
@@ -168,14 +214,31 @@
           </div>
         </section>
 
-        <div class="mb-10 aspect-video w-full overflow-hidden rounded-xl bg-gray-100">
-          <img :src="article.image" :alt="article.title" class="h-full w-full object-cover" />
+        <div v-if="isVideoMedia(article.image)" class="relative mb-10 aspect-video w-full overflow-hidden rounded-xl bg-black">
+          <CoverMedia :src="article.image" :alt="article.title" media-class="h-full w-full object-cover" />
+          <span class="pointer-events-none absolute bottom-3 right-3 flex items-center gap-2 rounded-full bg-red-600/90 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white shadow">
+            <Play class="h-3.5 w-3.5 fill-current" /> Video
+          </span>
         </div>
+        <button
+          v-else
+          type="button"
+          class="group relative mb-10 block aspect-video w-full cursor-zoom-in overflow-hidden rounded-xl bg-gray-100"
+          title="Nhấn để xem ảnh lớn"
+          @click="openLightbox(article.image, article.title)"
+        >
+          <img :src="article.image" :alt="article.title" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+          <span class="absolute bottom-3 right-3 flex items-center gap-2 rounded-full bg-black/65 px-3 py-2 text-sm font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+            <Maximize2 class="h-4 w-4" /> Xem ảnh lớn
+          </span>
+        </button>
 
         <div class="relative">
           <div
-            :class="['prose prose-lg max-w-none prose-p:text-gray-700 prose-headings:text-gray-900', showVipOverlay ? 'max-h-75 overflow-hidden' : '']"
+            :class="['article-content prose prose-lg max-w-none prose-p:text-gray-700 prose-headings:text-gray-900', showVipOverlay ? 'max-h-75 overflow-hidden' : '']"
+            :style="{ '--article-font-size': `${articleFontSize}px` }"
             v-html="articleHtml"
+            @click="handleArticleContentClick"
           />
 
           <!-- VIP Overlay -->
@@ -210,7 +273,7 @@
               class="group flex gap-4 rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition hover:border-blue-100 hover:shadow-md"
             >
               <div class="h-24 w-32 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-                <img :src="related.image" :alt="related.title" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+                <CoverMedia :src="related.image" :alt="related.title" media-class="h-full w-full object-cover transition-transform group-hover:scale-105" />
               </div>
               <div class="flex min-w-0 flex-1 flex-col justify-center">
                 <span class="mb-2 text-xs font-semibold uppercase text-blue-600">{{ related.category }}</span>
@@ -263,6 +326,22 @@
       </div>
     </div>
     </template>
+
+    <Teleport to="body">
+      <div
+        v-if="lightboxImage"
+        class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="lightboxAlt || 'Xem ảnh lớn'"
+        @click.self="closeLightbox"
+      >
+        <img :src="lightboxImage" :alt="lightboxAlt" class="max-h-[92vh] max-w-[96vw] object-contain" />
+        <button type="button" class="absolute right-4 top-4 rounded-full bg-white/15 p-3 text-white transition hover:bg-white/25" aria-label="Đóng ảnh lớn" @click="closeLightbox">
+          <X class="h-6 w-6" />
+        </button>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -278,9 +357,12 @@ import {
   Legend,
 } from 'chart.js'
 import { useRoute, useRouter } from 'vue-router'
-import { Calendar, Crown, Download, Sparkles, MessageSquare, Send, BarChart3 } from 'lucide-vue-next'
+import { Calendar, Crown, Download, Sparkles, MessageSquare, Send, BarChart3, Minus, Plus, Copy, Check, Maximize2, X, Play } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
+import CoverMedia from '@/components/CoverMedia.vue'
+import ArticleReader from '@/components/ArticleReader.vue'
+import { isVideoMedia } from '@/utils/media'
 import { fetchArticleStats, type ArticleStatDto } from '@/api/stats'
 import {
   createArticleComment,
@@ -309,6 +391,10 @@ const articleIdNumber = computed(() => Number(id.value))
 const canFetchSummary = computed(() => Number.isFinite(articleIdNumber.value) && articleIdNumber.value > 0)
 const article = ref<ArticleDetailViewModel | null>(null)
 const articleHtml = ref('')
+const articleFontSize = ref(Number(localStorage.getItem('article-font-size')) || 18)
+const linkCopied = ref(false)
+const lightboxImage = ref('')
+const lightboxAlt = ref('')
 const relatedArticles = ref<ArticleCardViewModel[]>([])
 const comments = ref<ArticleCommentViewModel[]>([])
 const loading = ref(true)
@@ -319,6 +405,70 @@ const authorAvatar = computed(() => {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=e5e7eb&color=111827`
 })
 const showVipOverlay = computed(() => previewMode.value)
+
+function changeFontSize(delta: number) {
+  articleFontSize.value = Math.min(24, Math.max(16, articleFontSize.value + delta))
+  localStorage.setItem('article-font-size', String(articleFontSize.value))
+}
+
+function shareTo(platform: 'facebook' | 'zalo' | 'twitter') {
+  const url = encodeURIComponent(window.location.href)
+  const title = encodeURIComponent(article.value?.title ?? '')
+  const shareUrls = {
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+    zalo: `https://zalo.me/share?url=${url}`,
+    twitter: `https://twitter.com/intent/tweet?url=${url}&text=${title}`,
+  }
+  window.open(shareUrls[platform], '_blank', 'noopener,noreferrer,width=720,height=560')
+}
+
+async function copyArticleLink() {
+  try {
+    await navigator.clipboard.writeText(window.location.href)
+  } catch {
+    const input = document.createElement('input')
+    input.value = window.location.href
+    document.body.appendChild(input)
+    input.select()
+    document.execCommand('copy')
+    input.remove()
+  }
+  linkCopied.value = true
+  window.setTimeout(() => { linkCopied.value = false }, 1800)
+}
+
+function openLightbox(src: string, alt = '') {
+  if (!src) return
+  lightboxImage.value = src
+  lightboxAlt.value = alt
+  document.body.style.overflow = 'hidden'
+}
+
+function closeLightbox() {
+  lightboxImage.value = ''
+  document.body.style.overflow = ''
+}
+
+function handleArticleContentClick(event: MouseEvent) {
+  const target = event.target as HTMLElement
+  if (target instanceof HTMLImageElement) {
+    openLightbox(target.currentSrc || target.src, target.alt)
+  }
+}
+
+function prepareArticleHtml(content: string) {
+  const documentFragment = new DOMParser().parseFromString(content, 'text/html')
+  documentFragment.querySelectorAll('video').forEach(video => {
+    video.controls = true
+    video.playsInline = true
+    video.preload = 'metadata'
+  })
+  documentFragment.querySelectorAll('img').forEach(image => {
+    image.loading = 'lazy'
+    image.title ||= 'Nhấn để xem ảnh lớn'
+  })
+  return documentFragment.body.innerHTML
+}
 
 const commentText = ref('')
 const commentError = ref('')
@@ -608,7 +758,7 @@ async function loadArticle() {
       const readArticle = await fetchArticleRead(articleIdNumber.value)
       article.value = toArticleDetailViewModel(readArticle)
       articlePublishedAt.value = readArticle.createdAt ?? ''
-      articleHtml.value = readArticle.content
+      articleHtml.value = prepareArticleHtml(readArticle.content)
       relatedArticles.value = buildRelatedArticles(allArticles, article.value.categoryName, article.value.id)
       previewMode.value = false
       nonVipNotice.value = readArticle.accessMessage ?? ''
@@ -761,3 +911,53 @@ function escapeHtml(content: string) {
 }
 
 </script>
+
+<style scoped>
+.tool-button {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background: white;
+  padding: 0.45rem 0.65rem;
+  color: #374151;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.tool-button:hover:not(:disabled) { border-color: #93c5fd; background: #eff6ff; }
+.tool-button:disabled { cursor: not-allowed; opacity: 0.4; }
+.share-button {
+  min-height: 2.25rem;
+  min-width: 2.25rem;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: filter 0.2s, transform 0.2s;
+}
+.share-button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.article-content { font-size: var(--article-font-size); line-height: 1.85; }
+.article-content :deep(p), .article-content :deep(li) { font-size: inherit; line-height: inherit; }
+.article-content :deep(img) { max-width: 100%; height: auto; cursor: zoom-in; border-radius: 0.75rem; }
+.article-content :deep(figure) { margin: 2rem auto; }
+.article-content :deep(figcaption) {
+  margin-top: 0.75rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-style: italic;
+  line-height: 1.5;
+  text-align: center;
+}
+.article-content :deep(video) {
+  display: block;
+  width: 100%;
+  max-height: 75vh;
+  margin: 1.5rem auto;
+  border-radius: 0.75rem;
+  background: #000;
+}
+:global(html.dark) .tool-button { border-color: #475569; background: #1e293b; color: #e2e8f0; }
+:global(html.dark) .article-content :deep(figcaption) { color: #94a3b8; }
+</style>

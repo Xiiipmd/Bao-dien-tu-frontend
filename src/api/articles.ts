@@ -114,6 +114,11 @@ export async function fetchPublicArticles(filters: ArticleSearchFilters = {}) {
   return response.data
 }
 
+export interface ArticleTranslationResponse {
+  text: string
+  language: 'en'
+}
+
 export async function fetchHomeArticles() {
   const response = await api.get<ArticleSearchResponse[]>('/api/articles/home')
   return response.data
@@ -136,6 +141,11 @@ export async function fetchArticlePreview(articleId: number) {
 
 export async function fetchArticleRead(articleId: number) {
   const response = await api.get<ArticleReadResponse>(`/api/articles/${articleId}/read`)
+  return response.data
+}
+
+export async function translateArticleToEnglish(text: string) {
+  const response = await api.post<ArticleTranslationResponse>('/api/articles/translate/en', { text })
   return response.data
 }
 

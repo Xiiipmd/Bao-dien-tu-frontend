@@ -9,10 +9,10 @@
     <!-- Hero Section -->
     <section class="mb-16">
       <div class="relative overflow-hidden rounded-2xl bg-slate-900 group">
-        <img
+        <CoverMedia
           :src="featuredArticle.image"
           :alt="featuredArticle.title"
-          class="absolute inset-0 h-full w-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105"
+          media-class="absolute inset-0 h-full w-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105"
         />
         <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
         <div class="relative flex min-h-[500px] flex-col justify-end p-8 md:p-12 lg:w-2/3">
@@ -110,6 +110,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { ArrowRight, ChevronRight, Sparkles, TrendingUp } from 'lucide-vue-next'
 import ArticleCard from '@/components/ArticleCard.vue'
+import CoverMedia from '@/components/CoverMedia.vue'
 import {
   fetchCategories,
   fetchHomeArticles,

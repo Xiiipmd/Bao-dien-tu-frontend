@@ -55,7 +55,7 @@
               <span>Huy hiệu thành viên VIP</span>
             </li>
             <li v-if="pkg.description" class="flex items-start gap-3 text-slate-400 text-sm italic">
-              <span>{{ pkg.description }}</span>
+              <span>{{ normalizeVipDescription(pkg.description, pkg.durationDays) }}</span>
             </li>
           </ul>
         </div>
@@ -97,6 +97,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { Crown, CheckCircle2, CreditCard, QrCode, Wallet, Loader2 } from 'lucide-vue-next'
 import api from '@/api'
+import { normalizeVipDescription } from '@/utils/vipText'
 
 interface VipPackage {
   id: number

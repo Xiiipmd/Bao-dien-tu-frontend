@@ -49,6 +49,17 @@
             <Search class="h-6 w-6" />
           </button>
 
+          <button
+            type="button"
+            class="rounded-full p-2 text-gray-600 transition hover:bg-gray-100 hover:text-blue-600"
+            :title="isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'"
+            :aria-label="isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'"
+            @click="toggleTheme"
+          >
+            <Sun v-if="isDark" class="h-5 w-5" />
+            <Moon v-else class="h-5 w-5" />
+          </button>
+
           <div class="flex items-center gap-3">
             <template v-if="auth.isLoggedIn">
               <NotificationBell />
@@ -206,7 +217,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Search, Crown, Menu, User, LogOut, Settings2 } from 'lucide-vue-next'
+import { Search, Crown, Menu, User, LogOut, Settings2, Moon, Sun } from 'lucide-vue-next'
 import { fetchCategories } from '@/api/articles'
 import { useAuthStore } from '@/stores/auth'
 import NotificationBell from '@/components/NotificationBell.vue'
@@ -216,6 +227,7 @@ const route = useRoute()
 const auth = useAuthStore()
 const searchQuery = ref('')
 const categories = ref<string[]>([])
+const isDark = ref(false)
 
 const mobileSearchInput = ref<HTMLInputElement | null>(null)
 
@@ -229,7 +241,25 @@ function openSearchDrawer() {
   }, 200)
 }
 
-onMounted(loadCategories)
+onMounted(() => {
+  loadCategories()
+  const savedTheme = localStorage.getItem('newsdaily-theme')
+  isDark.value = savedTheme
+    ? savedTheme === 'dark'
+    : window.matchMedia('(prefers-color-scheme: dark)').matches
+  applyTheme()
+})
+
+function applyTheme() {
+  document.documentElement.classList.toggle('dark', isDark.value)
+  document.documentElement.style.colorScheme = isDark.value ? 'dark' : 'light'
+}
+
+function toggleTheme() {
+  isDark.value = !isDark.value
+  localStorage.setItem('newsdaily-theme', isDark.value ? 'dark' : 'light')
+  applyTheme()
+}
 
 watch(() => route.fullPath, () => {
   searchQuery.value = ''
