@@ -41,6 +41,7 @@ export interface ArticleCommentViewModel {
   avatar: string
   content: string
   time: string
+  userId: number
 }
 
 export interface ArticleSearchResponse {
@@ -93,6 +94,11 @@ export interface ArticleCommentResponse {
   userName: string
   content: string
   createdAt: string
+  user?: {
+    id: number
+    displayName: string
+    avatarUrl?: string
+  }
 }
 
 export interface ArticleSearchFilters {
@@ -183,12 +189,16 @@ export function toArticleDetailViewModel(article: ArticleReadResponse): ArticleD
 }
 
 export function toArticleCommentViewModel(comment: ArticleCommentResponse): ArticleCommentViewModel {
+  const avatarUrl = comment.user?.avatarUrl
+    ? comment.user.avatarUrl
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.userName)}&background=eff6ff&color=1d4ed8`
   return {
     id: comment.id,
     user: comment.userName,
-    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.userName)}&background=eff6ff&color=1d4ed8`,
+    avatar: avatarUrl,
     content: comment.content,
     time: formatRelativeTime(comment.createdAt),
+    userId: comment.userId,
   }
 }
 

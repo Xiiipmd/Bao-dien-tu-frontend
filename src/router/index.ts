@@ -20,6 +20,7 @@ export const router = createRouter({
         { path: 'register', component: () => import('@/views/Register.vue') },
         { path: 'article/:id', component: () => import('@/views/ArticleDetail.vue') },
         { path: 'author/:id', component: () => import('@/views/AuthorProfile.vue') },
+        { path: 'user/:id', component: () => import('@/views/PublicUserProfile.vue') },
         {
           path: 'vip',
           component: () => import('@/views/VIPSubscription.vue'),

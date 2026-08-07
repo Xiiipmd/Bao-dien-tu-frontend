@@ -247,14 +247,18 @@
 
           <div class="space-y-6">
             <div v-for="comment in comments" :key="comment.id" class="flex gap-4">
-              <img :src="comment.avatar" :alt="comment.user" class="h-12 w-12 rounded-full object-cover bg-gray-100" />
+              <router-link :to="`/user/${comment.userId}`" class="block shrink-0">
+                <img :src="comment.avatar" :alt="comment.user" class="h-12 w-12 rounded-full object-cover bg-gray-100 hover:opacity-85 transition-opacity" />
+              </router-link>
               <div class="flex-1">
                 <div class="rounded-2xl rounded-tl-none bg-gray-50 p-4 border border-gray-100">
                   <div class="mb-1 flex items-center justify-between">
-                    <h4 class="font-bold text-gray-900">{{ comment.user }}</h4>
+                    <router-link :to="`/user/${comment.userId}`" class="font-bold text-gray-900 hover:text-blue-600 transition-colors">
+                      {{ comment.user }}
+                    </router-link>
                     <span class="text-xs text-gray-500">{{ comment.time }}</span>
                   </div>
-                  <p class="text-gray-700">{{ comment.content }}</p>
+                  <p class="text-gray-700 whitespace-pre-line">{{ comment.content }}</p>
                 </div>
               </div>
             </div>
