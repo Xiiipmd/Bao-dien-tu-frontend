@@ -228,24 +228,62 @@
             Bình luận ({{ comments.length }})
           </h3>
 
-          <form @submit.prevent="handleCommentSubmit" class="mb-10">
+          <div
+            v-if="!auth.isLoggedIn"
+            class="mb-8 flex flex-col gap-4 rounded-2xl border border-blue-100 bg-blue-50 p-5 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <p class="font-semibold text-gray-900">Đăng nhập để tham gia thảo luận</p>
+              <p class="mt-1 text-sm text-gray-600">Mọi thành viên NewsDaily đều có thể bình luận.</p>
+            </div>
+            <RouterLink
+              :to="{ path: '/login', query: { redirect: route.fullPath } }"
+              class="inline-flex shrink-0 items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+            >
+              Đăng nhập
+            </RouterLink>
+          </div>
+
+          <form v-else @submit.prevent="handleCommentSubmit" class="mb-10">
             <div class="mb-3">
               <textarea
                 v-model="commentText"
                 rows="3"
+                :maxlength="COMMENT_MAX_LENGTH"
+                :disabled="commentSubmitting"
                 placeholder="Chia sẻ ý kiến của bạn..."
                 class="w-full rounded-xl border border-gray-300 p-4 text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
               ></textarea>
-              <p v-if="commentError" class="mt-2 text-sm text-red-600">{{ commentError }}</p>
+              <div class="mt-2 flex items-start justify-between gap-4 text-sm">
+                <p v-if="commentError" class="text-red-600" role="alert">{{ commentError }}</p>
+                <span v-else class="text-gray-500">Tối thiểu {{ COMMENT_MIN_LENGTH }} ký tự</span>
+                <span class="ml-auto shrink-0 text-gray-500">{{ commentText.length }}/{{ COMMENT_MAX_LENGTH }}</span>
+              </div>
             </div>
             <div class="flex justify-end">
-              <button :disabled="commentSubmitting" type="submit" class="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60">
-                <Send class="h-4 w-4" /> Gửi bình luận
+              <button
+                :disabled="commentSubmitting || commentText.trim().length < COMMENT_MIN_LENGTH"
+                type="submit"
+                class="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Send class="h-4 w-4" /> {{ commentSubmitting ? 'Đang gửi...' : 'Gửi bình luận' }}
               </button>
             </div>
           </form>
 
-          <div class="space-y-6">
+          <div v-if="commentLoadError" class="mb-6 flex items-center justify-between gap-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+            <span>{{ commentLoadError }}</span>
+            <button type="button" class="shrink-0 font-semibold hover:underline" @click="loadComments(article.id)">Thử lại</button>
+          </div>
+
+          <div v-if="commentLoading" class="space-y-4" aria-live="polite" aria-label="Đang tải bình luận">
+            <div v-for="item in 3" :key="item" class="flex animate-pulse gap-4">
+              <div class="h-12 w-12 shrink-0 rounded-full bg-gray-200" />
+              <div class="h-20 flex-1 rounded-2xl bg-gray-100" />
+            </div>
+          </div>
+
+          <div v-else-if="comments.length" class="space-y-6">
             <div v-for="comment in comments" :key="comment.id" class="flex gap-4">
               <router-link :to="`/user/${comment.userId}`" class="block shrink-0">
                 <img :src="comment.avatar" :alt="comment.user" class="h-12 w-12 rounded-full object-cover bg-gray-100 hover:opacity-85 transition-opacity" />
@@ -262,6 +300,12 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <div v-else-if="!commentLoadError" class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center">
+            <MessageSquare class="mx-auto h-9 w-9 text-gray-300" />
+            <p class="mt-3 font-semibold text-gray-800">Chưa có bình luận</p>
+            <p class="mt-1 text-sm text-gray-500">Hãy là người đầu tiên chia sẻ ý kiến về bài viết này.</p>
           </div>
         </section>
       </div>
@@ -327,6 +371,10 @@ const showVipOverlay = computed(() => previewMode.value)
 const commentText = ref('')
 const commentError = ref('')
 const commentSubmitting = ref(false)
+const commentLoading = ref(false)
+const commentLoadError = ref('')
+const COMMENT_MIN_LENGTH = 5
+const COMMENT_MAX_LENGTH = 2000
 
 const isSummaryOpen = ref(false)
 const summaryContent = ref('')
@@ -531,28 +579,65 @@ async function handleCommentSubmit() {
   if (!article.value) {
     return
   }
-  if (commentText.value.trim().length < 5) {
+  if (!auth.isLoggedIn) {
+    await router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+
+  const content = commentText.value.trim()
+  if (content.length < COMMENT_MIN_LENGTH) {
     commentError.value = 'Bình luận quá ngắn, vui lòng nhập nội dung có ý nghĩa.'
+    return
+  }
+  if (content.length > COMMENT_MAX_LENGTH) {
+    commentError.value = `Bình luận không được vượt quá ${COMMENT_MAX_LENGTH} ký tự.`
     return
   }
 
   commentError.value = ''
   commentSubmitting.value = true
   try {
-    const createdComment = await createArticleComment(article.value.id, commentText.value.trim())
-    comments.value.unshift(toArticleCommentViewModel(createdComment))
+    const createdComment = await createArticleComment(article.value.id, content)
+    const viewModel = toArticleCommentViewModel(createdComment)
+    comments.value = [viewModel, ...comments.value.filter(comment => comment.id !== viewModel.id)]
     commentText.value = ''
   } catch (err: any) {
     const status = err?.response?.status
     if (status === 401) {
-      commentError.value = 'Vui lòng đăng nhập để bình luận.'
+      auth.logout()
+      await router.push({ path: '/login', query: { redirect: route.fullPath } })
     } else if (status === 403) {
-      commentError.value = err?.response?.data?.message ?? 'Chỉ thành viên VIP mới được bình luận.'
+      commentError.value = err?.response?.data?.message ?? 'Tài khoản hiện tại không có quyền bình luận.'
     } else {
       commentError.value = err?.response?.data?.message ?? 'Không thể gửi bình luận. Vui lòng thử lại.'
     }
   } finally {
     commentSubmitting.value = false
+  }
+}
+
+async function loadComments(articleId: number) {
+  commentLoading.value = true
+  commentLoadError.value = ''
+
+  try {
+    const commentList = await fetchArticleComments(articleId)
+    if (articleId !== articleIdNumber.value) {
+      return
+    }
+
+    comments.value = commentList
+      .map(toArticleCommentViewModel)
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
+  } catch (err: any) {
+    if (articleId === articleIdNumber.value) {
+      comments.value = []
+      commentLoadError.value = err?.response?.data?.message ?? 'Không thể tải bình luận. Bài viết vẫn có thể đọc bình thường.'
+    }
+  } finally {
+    if (articleId === articleIdNumber.value) {
+      commentLoading.value = false
+    }
   }
 }
 
@@ -588,14 +673,14 @@ async function loadArticle() {
   commentError.value = ''
 
   try {
-    const [allArticles, commentList] = await Promise.all([
-      fetchPublicArticles(),
-      fetchArticleComments(articleIdNumber.value),
-    ])
+    const requestedArticleId = articleIdNumber.value
+    comments.value = []
+    void loadComments(requestedArticleId)
+
+    const allArticles = await fetchPublicArticles()
     const articleSummary = allArticles.find(candidate => candidate.id === articleIdNumber.value)
 
     relatedArticles.value = []
-    comments.value = commentList.map(toArticleCommentViewModel)
 
     try {
       if (!auth.isLoggedIn && articleSummary?.type === 'VIP') {
