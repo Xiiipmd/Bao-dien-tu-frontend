@@ -41,6 +41,7 @@ export interface ArticleCommentViewModel {
   avatar: string
   content: string
   time: string
+  createdAt: string
   userId: number
 }
 
@@ -198,6 +199,7 @@ export function toArticleCommentViewModel(comment: ArticleCommentResponse): Arti
     avatar: avatarUrl,
     content: comment.content,
     time: formatRelativeTime(comment.createdAt),
+    createdAt: comment.createdAt,
     userId: comment.userId,
   }
 }
