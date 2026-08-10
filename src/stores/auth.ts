@@ -50,6 +50,15 @@ export const useAuthStore = defineStore('auth', () => {
     clearSession()
   }
 
+  function updateVipExpiryDate(value: string | null) {
+    vipExpiryDate.value = value
+    if (value) {
+      localStorage.setItem('vip_expiry', value)
+    } else {
+      localStorage.removeItem('vip_expiry')
+    }
+  }
+
   function clearSession() {
     token.value = null
     userName.value = null
@@ -75,6 +84,7 @@ export const useAuthStore = defineStore('auth', () => {
     isStaff,
     login,
     register,
+    updateVipExpiryDate,
     logout,
   }
 })
