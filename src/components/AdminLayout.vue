@@ -70,7 +70,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { LayoutDashboard, FileText, CheckSquare, Crown, LogOut, Search, TrendingUp, UserRound } from 'lucide-vue-next'
+import { LayoutDashboard, FileText, CheckSquare, Crown, LogOut, Search, TrendingUp, UserRound, Users } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import NotificationBell from '@/components/NotificationBell.vue'
 
@@ -93,6 +93,7 @@ const navItems = computed(() => {
   }
 
   if (auth.isAdmin) {
+    items.push({ path: '/admin/users', label: 'Quản lý người dùng', icon: Users, exact: false })
     items.push({ path: '/admin/posts/visibility', label: 'Ẩn / Hiện bài', icon: FileText, exact: false })
     items.push({ path: '/admin/revenue', label: 'Thống kê hệ thống', icon: TrendingUp, exact: false })
     items.push({ path: '/admin/vip', label: 'Gói VIP', icon: Crown, exact: false })
