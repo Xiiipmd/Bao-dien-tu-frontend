@@ -48,7 +48,7 @@
         <div class="flex-1 overflow-y-auto p-6">
           <img v-if="selectedPost.coverImage" :src="selectedPost.coverImage" :alt="selectedPost.title" class="mb-6 w-full h-64 object-cover rounded-xl" />
           <p class="mb-4 text-sm font-medium text-gray-500">{{ selectedPost.sapo }}</p>
-          <div class="prose max-w-none text-gray-700" v-html="selectedPost.content"></div>
+          <div class="prose max-w-none text-gray-700" v-html="sanitizeArticleHtml(selectedPost.content)"></div>
         </div>
       </template>
       <div v-else class="flex-1 flex items-center justify-center text-gray-400">
@@ -83,6 +83,7 @@ import { onMounted, ref, watch } from 'vue'
 import { User, Calendar, CheckCircle, XCircle, FileText } from 'lucide-vue-next'
 import { formatDate } from '@/api/articles'
 import { fetchPendingArticleDetail, fetchPendingArticles, moderateArticle, type StaffArticleDto } from '@/api/staff'
+import { sanitizeArticleHtml } from '@/utils/sanitizeArticleHtml'
 
 const pendingPosts = ref<StaffArticleDto[]>([])
 const selectedPostId = ref<number | null>(null)

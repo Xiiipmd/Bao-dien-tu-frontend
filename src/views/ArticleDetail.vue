@@ -175,7 +175,7 @@
         <div class="relative">
           <div
             :class="['prose prose-lg max-w-none prose-p:text-gray-700 prose-headings:text-gray-900', showVipOverlay ? 'max-h-75 overflow-hidden' : '']"
-            v-html="articleHtml"
+            v-html="safeArticleHtml"
           />
 
           <!-- VIP Overlay -->
@@ -184,10 +184,29 @@
             <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-md">
               <div class="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center shadow-lg">
                 <Crown class="mx-auto mb-3 h-10 w-10 text-amber-500" />
-                <h3 class="mb-2 text-xl font-bold text-gray-900">Nội dung dành riêng cho VIP</h3>
-                <p class="mb-6 text-sm text-gray-600">Nâng cấp tài khoản để đọc trọn vẹn bài viết này và hàng ngàn bài viết chất lượng cao khác.</p>
-                <RouterLink to="/vip" class="inline-block w-full rounded-lg bg-amber-500 px-6 py-3 font-bold text-white transition-colors hover:bg-amber-600">
-                  Đăng ký VIP ngay
+                <h3 class="mb-2 text-xl font-bold text-gray-900">{{ vipOverlayTitle }}</h3>
+                <p class="mb-6 text-sm text-gray-600">{{ vipOverlayDescription }}</p>
+                <RouterLink
+                  v-if="previewAccessMode === 'LOGIN_REQUIRED'"
+                  :to="{ path: '/login', query: { redirect: route.fullPath } }"
+                  class="inline-block w-full rounded-lg bg-amber-500 px-6 py-3 font-bold text-white transition-colors hover:bg-amber-600"
+                >
+                  Đăng nhập để đọc
+                </RouterLink>
+                <button
+                  v-else-if="previewAccessMode === 'FREE_QUOTA'"
+                  type="button"
+                  class="w-full rounded-lg bg-amber-500 px-6 py-3 font-bold text-white transition-colors hover:bg-amber-600"
+                  @click="showVipConfirmation = true"
+                >
+                  Dùng 1 lượt đọc miễn phí
+                </button>
+                <RouterLink
+                  v-else
+                  to="/vip"
+                  class="inline-block w-full rounded-lg bg-amber-500 px-6 py-3 font-bold text-white transition-colors hover:bg-amber-600"
+                >
+                  Xem các gói VIP
                 </RouterLink>
               </div>
             </div>
@@ -311,6 +330,45 @@
       </div>
     </div>
     </template>
+
+    <div
+      v-if="showVipConfirmation"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="vip-confirm-title"
+    >
+      <div class="w-full max-w-md rounded-2xl border border-amber-100 bg-white p-6 shadow-2xl">
+        <div class="flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+          <Crown class="h-6 w-6" />
+        </div>
+        <p class="mt-5 text-xs font-bold uppercase tracking-wider text-amber-700">Bài viết VIP</p>
+        <h3 id="vip-confirm-title" class="mt-2 text-2xl font-bold text-gray-900">Dùng 1 lượt đọc miễn phí?</h3>
+        <p class="mt-3 text-sm leading-6 text-gray-600">
+          Bạn còn {{ vipRemainingFreeReads }}/3 lượt trong tháng này. Sau khi mở bài, bạn sẽ còn
+          {{ Math.max(0, vipRemainingFreeReads - 1) }}/3 lượt. Bài đã mở có thể xem lại mà không bị trừ thêm.
+        </p>
+        <p v-if="vipUnlockError" class="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ vipUnlockError }}</p>
+        <div class="mt-6 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            :disabled="vipUnlocking"
+            class="rounded-xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            @click="showVipConfirmation = false"
+          >
+            Để sau
+          </button>
+          <button
+            type="button"
+            :disabled="vipUnlocking"
+            class="rounded-xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
+            @click="handleConfirmVipRead"
+          >
+            {{ vipUnlocking ? 'Đang mở bài...' : 'Xác nhận đọc' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -337,6 +395,7 @@ import {
   fetchArticlePreview,
   fetchArticleRead,
   fetchPublicArticles,
+  formatDate,
   toArticleCardViewModel,
   toArticleCommentViewModel,
   toArticleDetailViewModel,
@@ -345,6 +404,7 @@ import {
   type ArticleDetailViewModel,
   type ArticleSearchResponse,
 } from '@/api/articles'
+import { sanitizeArticleHtml } from '@/utils/sanitizeArticleHtml'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
@@ -362,11 +422,31 @@ const comments = ref<ArticleCommentViewModel[]>([])
 const loading = ref(true)
 const pageError = ref('')
 const previewMode = ref(false)
+const previewAccessMode = ref<'VIP' | 'FREE_QUOTA' | 'ALREADY_READ' | 'PAYWALL' | 'LOGIN_REQUIRED' | null>(null)
+const vipRemainingFreeReads = ref(0)
+const showVipConfirmation = ref(false)
+const vipUnlocking = ref(false)
+const vipUnlockError = ref('')
 const authorAvatar = computed(() => {
   const name = article.value?.authorName ?? 'Tác giả'
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=e5e7eb&color=111827`
 })
 const showVipOverlay = computed(() => previewMode.value)
+const safeArticleHtml = computed(() => sanitizeArticleHtml(articleHtml.value))
+const vipOverlayTitle = computed(() => {
+  if (previewAccessMode.value === 'LOGIN_REQUIRED') return 'Đăng nhập để tiếp tục'
+  if (previewAccessMode.value === 'FREE_QUOTA') return 'Bạn có thể mở bài này miễn phí'
+  return 'Nội dung dành riêng cho VIP'
+})
+const vipOverlayDescription = computed(() => {
+  if (previewAccessMode.value === 'LOGIN_REQUIRED') {
+    return 'Đăng nhập để sử dụng 3 lượt đọc bài VIP miễn phí mỗi tháng.'
+  }
+  if (previewAccessMode.value === 'FREE_QUOTA') {
+    return `Bạn còn ${vipRemainingFreeReads.value}/3 lượt đọc miễn phí trong tháng này.`
+  }
+  return 'Nâng cấp tài khoản để đọc không giới hạn toàn bộ nội dung VIP.'
+})
 
 const commentText = ref('')
 const commentError = ref('')
@@ -426,10 +506,9 @@ const statsRangeLabel = computed(() => {
 
 const statsRevenueTitle = computed(() => (auth.isAdmin ? 'Tổng doanh thu tác giả nhận' : 'Doanh thu tác giả nhận'))
 const statsRevenueCaption = computed(() => {
-  if (!article.value?.isVip) {
-    return 'Chỉ áp dụng cho bài viết VIP.'
-  }
-  return auth.isAdmin ? 'Ước tính doanh thu theo dữ liệu backend.' : 'Ước tính theo dữ liệu backend.'
+  return auth.isAdmin
+    ? 'Ước tính theo lượt đọc hợp lệ và đơn giá FREE/VIP của backend.'
+    : 'Ước tính theo lượt đọc hợp lệ và loại bài viết.'
 })
 
 const statsChartData = computed(() => ({
@@ -467,6 +546,10 @@ watch(id, async () => {
   statsEndInput.value = ''
   statsGranularity.value = 'day'
   statsRange.value = null
+  showVipConfirmation.value = false
+  vipUnlocking.value = false
+  vipUnlockError.value = ''
+  previewAccessMode.value = null
   await loadArticle()
 }, { immediate: true })
 
@@ -683,53 +766,32 @@ async function loadArticle() {
     relatedArticles.value = []
 
     try {
-      if (!auth.isLoggedIn && articleSummary?.type === 'VIP') {
-        throw {
-          response: {
-            status: 403,
-            data: {
-              message: 'Vui lòng đăng nhập để sử dụng lượt đọc miễn phí hoặc đăng ký VIP để đọc toàn bộ bài viết này.',
-            },
-          },
+      if (articleSummary?.type === 'VIP') {
+        const previewArticle = await fetchArticlePreview(articleIdNumber.value)
+        previewAccessMode.value = previewArticle.accessMode
+        vipRemainingFreeReads.value = previewArticle.remainingFreeReads ?? 0
+
+        if (previewArticle.accessMode === 'VIP' || previewArticle.accessMode === 'ALREADY_READ') {
+          applyReadArticle(await fetchArticleRead(articleIdNumber.value), allArticles)
+          return
         }
+
+        applyPreviewArticle(previewArticle, articleSummary, allArticles)
+        showVipConfirmation.value = previewArticle.accessMode === 'FREE_QUOTA'
+        return
       }
 
-      const readArticle = await fetchArticleRead(articleIdNumber.value)
-      article.value = toArticleDetailViewModel(readArticle)
-      articlePublishedAt.value = readArticle.createdAt ?? ''
-      articleHtml.value = readArticle.content
-      relatedArticles.value = buildRelatedArticles(allArticles, article.value.categoryName, article.value.id)
-      previewMode.value = false
-      nonVipNotice.value = readArticle.accessMessage ?? ''
+      applyReadArticle(await fetchArticleRead(articleIdNumber.value), allArticles)
     } catch (err: any) {
       if (err?.response?.status !== 403) {
         throw err
       }
 
       const previewArticle = await fetchArticlePreview(articleIdNumber.value)
-      article.value = {
-        id: previewArticle.id,
-        title: previewArticle.title,
-        sapo: previewArticle.sapo,
-        content: previewArticle.previewContent,
-        image: previewArticle.coverImage,
-        authorId: previewArticle.authorId,
-        authorName: previewArticle.authorName,
-        categoryName: previewArticle.categoryName,
-        isVip: previewArticle.type === 'VIP',
-        date: '',
-        createdAt: '',
-        viewCount: 0,
-        vipAccessGranted: false,
-        meteredAccessApplied: false,
-        remainingFreeReads: null,
-        accessMessage: err?.response?.data?.message ?? 'Bài viết này yêu cầu quyền đọc VIP.',
-      }
-      articlePublishedAt.value = ''
-      articleHtml.value = renderPreviewHtml(previewArticle.previewContent)
-      relatedArticles.value = buildRelatedArticles(allArticles, article.value.categoryName, article.value.id)
-      previewMode.value = true
-      nonVipNotice.value = err?.response?.data?.message ?? 'Bạn cần VIP để đọc tiếp nội dung đầy đủ.'
+      previewAccessMode.value = previewArticle.accessMode
+      vipRemainingFreeReads.value = previewArticle.remainingFreeReads ?? 0
+      applyPreviewArticle(previewArticle, articleSummary, allArticles, err?.response?.data?.message)
+      showVipConfirmation.value = previewArticle.accessMode === 'FREE_QUOTA'
     }
   } catch (err: any) {
     pageError.value = err?.response?.data?.message ?? 'Không thể tải chi tiết bài viết. Vui lòng thử lại.'
@@ -739,6 +801,90 @@ async function loadArticle() {
     comments.value = []
   } finally {
     loading.value = false
+  }
+}
+
+function applyReadArticle(
+  readArticle: Awaited<ReturnType<typeof fetchArticleRead>>,
+  allArticles: ArticleSearchResponse[],
+) {
+  article.value = toArticleDetailViewModel(readArticle)
+  articlePublishedAt.value = readArticle.createdAt ?? ''
+  articleHtml.value = readArticle.content
+  relatedArticles.value = buildRelatedArticles(allArticles, article.value.categoryName, article.value.id)
+  previewMode.value = false
+  previewAccessMode.value = null
+  showVipConfirmation.value = false
+  nonVipNotice.value = readArticle.accessMessage ?? ''
+}
+
+function applyPreviewArticle(
+  previewArticle: Awaited<ReturnType<typeof fetchArticlePreview>>,
+  articleSummary: ArticleSearchResponse | undefined,
+  allArticles: ArticleSearchResponse[],
+  fallbackMessage?: string,
+) {
+  const message = fallbackMessage ?? previewMessage(previewArticle.accessMode)
+  article.value = {
+    id: previewArticle.id,
+    title: previewArticle.title,
+    sapo: previewArticle.sapo,
+    content: previewArticle.previewContent,
+    image: previewArticle.coverImage,
+    authorId: previewArticle.authorId,
+    authorName: previewArticle.authorName,
+    categoryName: previewArticle.categoryName,
+    isVip: previewArticle.type === 'VIP',
+    date: formatDate(articleSummary?.createdAt),
+    createdAt: articleSummary?.createdAt ?? '',
+    viewCount: 0,
+    vipAccessGranted: false,
+    meteredAccessApplied: false,
+    remainingFreeReads: previewArticle.remainingFreeReads,
+    accessMessage: message,
+  }
+  articlePublishedAt.value = articleSummary?.createdAt ?? ''
+  articleHtml.value = renderPreviewHtml(previewArticle.previewContent)
+  relatedArticles.value = buildRelatedArticles(allArticles, article.value.categoryName, article.value.id)
+  previewMode.value = true
+  nonVipNotice.value = message
+}
+
+function previewMessage(accessMode: Awaited<ReturnType<typeof fetchArticlePreview>>['accessMode']) {
+  switch (accessMode) {
+    case 'LOGIN_REQUIRED':
+      return 'Đăng nhập để sử dụng 3 lượt đọc bài VIP miễn phí mỗi tháng.'
+    case 'FREE_QUOTA':
+      return 'Xác nhận trước khi dùng một lượt đọc VIP miễn phí.'
+    case 'PAYWALL':
+      return 'Bạn đã dùng hết lượt miễn phí trong tháng. Hãy chọn gói VIP để đọc tiếp.'
+    default:
+      return ''
+  }
+}
+
+async function handleConfirmVipRead() {
+  if (vipUnlocking.value) return
+  vipUnlocking.value = true
+  vipUnlockError.value = ''
+  try {
+    const allArticles = await fetchPublicArticles()
+    applyReadArticle(await fetchArticleRead(articleIdNumber.value), allArticles)
+  } catch (err: any) {
+    vipUnlockError.value = err?.response?.data?.message ?? 'Không thể mở bài VIP. Vui lòng thử lại.'
+    try {
+      const previewArticle = await fetchArticlePreview(articleIdNumber.value)
+      previewAccessMode.value = previewArticle.accessMode
+      vipRemainingFreeReads.value = previewArticle.remainingFreeReads ?? 0
+      if (previewArticle.accessMode !== 'FREE_QUOTA') {
+        showVipConfirmation.value = false
+        await loadArticle()
+      }
+    } catch {
+      // Keep the current preview and actionable error visible.
+    }
+  } finally {
+    vipUnlocking.value = false
   }
 }
 

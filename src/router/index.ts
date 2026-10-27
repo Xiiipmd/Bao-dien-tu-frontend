@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '@/components/Layout.vue'
 import AdminLayout from '@/components/AdminLayout.vue'
+import { useAuthStore } from '@/stores/auth'
 
 type AppRouteMeta = {
   requiresAuth?: boolean
@@ -22,9 +23,14 @@ export const router = createRouter({
         { path: 'author/:id', component: () => import('@/views/AuthorProfile.vue') },
         { path: 'user/:id', component: () => import('@/views/PublicUserProfile.vue') },
         {
+          path: 'account',
+          component: () => import('@/views/Account.vue'),
+          meta: { requiresAuth: true } satisfies AppRouteMeta,
+        },
+        {
           path: 'vip',
           component: () => import('@/views/VIPSubscription.vue'),
-          meta: { requiresAuth: true } satisfies AppRouteMeta,
+          meta: { requiresAuth: true, allowedRoles: ['MEMBER', 'VIP'] } satisfies AppRouteMeta,
         },
         { path: 'search', component: () => import('@/views/Search.vue') },
       ],
@@ -80,9 +86,8 @@ export const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const token = localStorage.getItem('jwt_token')
-  const role = localStorage.getItem('user_role')
   const requiresAuth = to.matched.some(record => Boolean((record.meta as AppRouteMeta).requiresAuth))
   const mostSpecificRoleRule = [...to.matched]
     .reverse()
@@ -92,6 +97,22 @@ router.beforeEach((to) => {
   if (requiresAuth && !token) {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
+
+  const auth = useAuthStore()
+  if (requiresAuth && token) {
+    try {
+      await auth.refreshSession()
+    } catch (error: any) {
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        auth.logout()
+        return { path: '/login', query: { redirect: to.fullPath } }
+      }
+      // A temporary network error must not destroy a valid local session.
+      // Backend authorization still protects every privileged request.
+    }
+  }
+
+  const role = auth.role ?? localStorage.getItem('user_role')
 
   if (mostSpecificRoleRule && !mostSpecificRoleRule.includes(role ?? '')) {
     return { path: '/' }

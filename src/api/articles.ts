@@ -68,6 +68,10 @@ export interface ArticlePreviewResponse {
   categoryName: string
   type: BackendArticleType
   paywallRequired: boolean
+  accessMode: 'VIP' | 'FREE_QUOTA' | 'ALREADY_READ' | 'PAYWALL' | 'LOGIN_REQUIRED'
+  remainingFreeReads: number | null
+  alreadyRead: boolean
+  willConsumeFreeRead: boolean
 }
 
 export interface ArticleReadResponse {

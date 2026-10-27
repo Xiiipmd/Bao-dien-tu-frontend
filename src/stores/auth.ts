@@ -7,6 +7,7 @@ export const useAuthStore = defineStore('auth', () => {
   const userName = ref<string | null>(localStorage.getItem('user_name'))
   const role = ref<string | null>(localStorage.getItem('user_role'))
   const vipExpiryDate = ref<string | null>(localStorage.getItem('vip_expiry'))
+  const avatar = ref<string | null>(localStorage.getItem('user_avatar'))
   const userId = computed<number | null>(() => decodeUserId(token.value))
 
   const isLoggedIn = computed(() => !!token.value)
@@ -18,6 +19,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthor = computed(() => role.value === 'AUTHOR')
   const isCensor = computed(() => role.value === 'CENSOR')
   const isStaff = computed(() => ['ADMIN', 'AUTHOR', 'CENSOR'].includes(role.value ?? ''))
+  const isReader = computed(() => role.value === 'MEMBER' || role.value === 'VIP')
 
   async function login(email: string, password: string) {
     clearSession()
@@ -27,9 +29,13 @@ export const useAuthStore = defineStore('auth', () => {
     userName.value = data.name
     role.value = data.role
     vipExpiryDate.value = data.vipExpiryDate ?? null
+    avatar.value = data.avatar ?? null
     localStorage.setItem('jwt_token', data.jwtToken)
     localStorage.setItem('user_name', data.name)
     localStorage.setItem('user_role', data.role)
+    if (data.avatar) {
+      localStorage.setItem('user_avatar', data.avatar)
+    }
     if (data.vipExpiryDate) {
       localStorage.setItem('vip_expiry', data.vipExpiryDate)
     }
@@ -44,6 +50,29 @@ export const useAuthStore = defineStore('auth', () => {
     role?: 'MEMBER' | 'AUTHOR'
   }) {
     await api.post('/api/auth/register', payload)
+  }
+
+  async function refreshSession() {
+    if (!token.value) return null
+    const res = await api.get('/api/me/account')
+    const data = res.data
+    userName.value = data.fullName
+    role.value = data.role
+    vipExpiryDate.value = data.vipExpiryDate ?? null
+    avatar.value = data.avatar ?? null
+    localStorage.setItem('user_name', data.fullName)
+    localStorage.setItem('user_role', data.role)
+    if (data.avatar) {
+      localStorage.setItem('user_avatar', data.avatar)
+    } else {
+      localStorage.removeItem('user_avatar')
+    }
+    if (data.vipExpiryDate) {
+      localStorage.setItem('vip_expiry', data.vipExpiryDate)
+    } else {
+      localStorage.removeItem('vip_expiry')
+    }
+    return data
   }
 
   function logout() {
@@ -64,10 +93,12 @@ export const useAuthStore = defineStore('auth', () => {
     userName.value = null
     role.value = null
     vipExpiryDate.value = null
+    avatar.value = null
     localStorage.removeItem('jwt_token')
     localStorage.removeItem('user_name')
     localStorage.removeItem('user_role')
     localStorage.removeItem('vip_expiry')
+    localStorage.removeItem('user_avatar')
   }
 
   return {
@@ -76,14 +107,17 @@ export const useAuthStore = defineStore('auth', () => {
     userName,
     role,
     vipExpiryDate,
+    avatar,
     isLoggedIn,
     isVip,
     isAdmin,
     isAuthor,
     isCensor,
     isStaff,
+    isReader,
     login,
     register,
+    refreshSession,
     updateVipExpiryDate,
     logout,
   }

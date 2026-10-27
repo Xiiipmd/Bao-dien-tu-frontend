@@ -114,14 +114,14 @@
                 <td class="px-6 py-4 align-top text-sm text-gray-500">{{ formatDate(article.createdAt) }}</td>
                 <td class="px-6 py-4 align-top text-right">
                   <RouterLink
-                    v-if="article.status !== 'HIDDEN'"
+                    v-if="article.status === 'DRAFT' || article.status === 'REJECTED'"
                     :to="`/admin/posts/${article.id}/edit`"
                     class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
                   >
                     Chỉnh sửa
                   </RouterLink>
                   <span v-else class="text-xs font-medium text-slate-500">
-                    Không thể sửa do đã bị khóa/gỡ bỏ
+                    {{ article.status === 'PENDING' ? 'Đang chờ kiểm duyệt' : article.status === 'PUBLISHED' ? 'Đã xuất bản' : 'Không thể chỉnh sửa' }}
                   </span>
                 </td>
               </tr>

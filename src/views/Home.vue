@@ -33,8 +33,33 @@
       </div>
     </section>
 
+    <!-- Compact category navigation -->
+    <section v-if="categories.length" class="mb-12 border-y border-slate-200 py-4">
+      <div class="flex items-center gap-3">
+        <div class="flex shrink-0 items-center gap-2 pr-2 text-sm font-bold text-slate-900">
+          <span class="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+            <LayoutGrid class="h-4 w-4" />
+          </span>
+          <span class="hidden sm:inline">Chuyên mục</span>
+        </div>
+        <nav
+          aria-label="Chuyên mục bài viết"
+          class="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0"
+        >
+          <RouterLink
+            v-for="cat in categories"
+            :key="cat"
+            :to="`/search?category=${encodeURIComponent(cat)}`"
+            class="shrink-0 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+          >
+            {{ cat }}
+          </RouterLink>
+        </nav>
+      </div>
+    </section>
+
     <!-- Main Content Layout -->
-    <div class="grid grid-cols-1 gap-12 lg:grid-cols-12">
+    <div class="grid grid-cols-1 gap-8 lg:grid-cols-12 xl:gap-10">
       <!-- Left Column: Article Grid -->
       <div class="lg:col-span-8">
         <div class="mb-6 flex items-center justify-between">
@@ -49,45 +74,29 @@
       </div>
 
       <!-- Right Column: Sidebar -->
-      <aside class="lg:col-span-4 space-y-10">
-        <!-- Categories Widget -->
-        <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-          <h3 class="mb-4 text-lg font-bold text-gray-900 flex items-center gap-2">
-            <div class="h-4 w-1 bg-blue-600 rounded-full" />
-            Danh mục
-          </h3>
-          <ul class="space-y-3">
-            <li v-for="cat in categories" :key="cat">
-              <RouterLink
-                :to="`/search?category=${encodeURIComponent(cat)}`"
-                class="flex items-center justify-between rounded-lg p-2 text-gray-600 hover:bg-gray-50 hover:text-blue-600 font-medium transition-colors"
-              >
-                {{ cat }}
-                <ChevronRight class="h-4 w-4 text-gray-400" />
-              </RouterLink>
-            </li>
-          </ul>
-        </div>
-
+      <aside class="lg:col-span-4">
         <!-- Trending Widget -->
-        <div class="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-          <h3 class="mb-6 text-lg font-bold text-gray-900 flex items-center gap-2">
-            <TrendingUp class="h-5 w-5 text-blue-600" />
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:sticky lg:top-24">
+          <h3 class="mb-2 flex items-center gap-2 text-lg font-bold text-gray-900">
+            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+              <TrendingUp class="h-4 w-4" />
+            </span>
             Bài viết nổi bật
           </h3>
-          <div class="space-y-6">
+          <p class="mb-5 pl-11 text-sm text-slate-500">Những bài đang được độc giả quan tâm</p>
+          <div class="divide-y divide-slate-100">
             <RouterLink
               v-for="(article, index) in trendingArticles"
               :key="article.id"
               :to="`/article/${article.id}`"
-              class="group flex gap-4"
+              class="group flex gap-4 py-4 first:pt-0 last:pb-0"
             >
-              <div class="flex-shrink-0 text-3xl font-black text-gray-200 group-hover:text-blue-200 transition-colors">
+              <div class="flex-shrink-0 text-2xl font-black text-slate-200 transition-colors group-hover:text-blue-200">
                 0{{ index + 1 }}
               </div>
-              <div>
-                <h4 class="mb-1 font-bold leading-tight text-gray-900 group-hover:text-blue-600 line-clamp-2">{{ article.title }}</h4>
-                <span class="text-xs text-gray-500">{{ article.date }}</span>
+              <div class="min-w-0">
+                <h4 class="mb-1 line-clamp-2 font-bold leading-snug text-gray-900 transition-colors group-hover:text-blue-600">{{ article.title }}</h4>
+                <span class="text-xs font-medium uppercase tracking-wide text-gray-400">{{ article.category }} · {{ article.date }}</span>
               </div>
             </RouterLink>
           </div>
@@ -100,7 +109,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ArrowRight, ChevronRight, TrendingUp } from 'lucide-vue-next'
+import { ArrowRight, ChevronRight, LayoutGrid, TrendingUp } from 'lucide-vue-next'
 import ArticleCard from '@/components/ArticleCard.vue'
 import { fetchCategories, fetchPublicArticles, toArticleCardViewModel, type ArticleCardViewModel } from '@/api/articles'
 

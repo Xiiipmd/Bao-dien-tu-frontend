@@ -82,7 +82,13 @@ export async function fetchManageableArticleDetail(articleId: number) {
 }
 
 export async function createStaffArticle(payload: StaffArticleCreatePayload) {
-  await api.post('/api/staff/articles/create', payload)
+  const response = await api.post<StaffArticleDto>('/api/staff/articles/create', payload)
+  return response.data
+}
+
+export async function createStaffDraft(payload: StaffArticleCreatePayload) {
+  const response = await api.post<StaffArticleDto>('/api/staff/articles/drafts', payload)
+  return response.data
 }
 
 export async function updateStaffArticle(articleId: number, payload: StaffArticleUpdatePayload) {
@@ -141,4 +147,9 @@ export async function updateAdminVipPackage(id: number, payload: AdminVipPackage
     ...response.data,
     price: Number(response.data.price),
   }
+}
+
+export async function submitStaffArticle(articleId: number) {
+  const response = await api.post<StaffArticleDto>(`/api/staff/articles/${articleId}/submit`)
+  return response.data
 }

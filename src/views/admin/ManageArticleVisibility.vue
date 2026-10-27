@@ -66,7 +66,7 @@
           <div class="p-6">
             <img v-if="selectedArticle.coverImage" :src="selectedArticle.coverImage" :alt="selectedArticle.title" class="mb-6 h-64 w-full rounded-xl object-cover" />
             <p class="mb-4 text-sm font-medium text-gray-500">{{ selectedArticle.sapo }}</p>
-            <div class="prose max-w-none text-gray-700" v-html="selectedArticle.content"></div>
+            <div class="prose max-w-none text-gray-700" v-html="sanitizeArticleHtml(selectedArticle.content)"></div>
           </div>
         </template>
         <div v-else class="flex h-full items-center justify-center text-gray-400">Chọn một bài viết để xem chi tiết.</div>
@@ -79,6 +79,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { formatDate } from '@/api/articles'
 import { fetchVisibilityArticleDetail, fetchVisibilityArticles, hideArticle, showArticle, type StaffArticleDto } from '@/api/staff'
+import { sanitizeArticleHtml } from '@/utils/sanitizeArticleHtml'
 
 const keyword = ref('')
 const articles = ref<StaffArticleDto[]>([])

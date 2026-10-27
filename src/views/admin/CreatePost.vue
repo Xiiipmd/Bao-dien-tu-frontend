@@ -10,11 +10,18 @@
         >
           Hủy
         </button>
+        <button
+          :disabled="submitting || savingDraft || (isEditing && !!loadError)"
+          @click="handleSaveDraft"
+          class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60"
+        >
+          <Save class="h-4 w-4" /> {{ savingDraft ? 'Đang lưu...' : 'Lưu nháp' }}
+        </button>
         <button @click="resetForm" class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
           <Save class="h-4 w-4" /> Làm mới
         </button>
-        <button :disabled="submitting || (isEditing && !!loadError)" @click="handlePublish" class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-60">
-          <Send class="h-4 w-4" /> {{ submitting ? 'Đang gửi...' : (isEditing ? 'Cập nhật và gửi lại duyệt' : 'Xuất bản') }}
+        <button :disabled="submitting || savingDraft || (isEditing && !!loadError)" @click="handlePublish" class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-60">
+          <Send class="h-4 w-4" /> {{ submitting ? 'Đang gửi...' : (isEditing ? 'Cập nhật và gửi lại duyệt' : 'Gửi duyệt') }}
         </button>
       </div>
     </div>
@@ -138,7 +145,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { Upload, Save, Send } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { createStaffArticle, fetchCategories, fetchManageableArticleDetail, updateStaffArticle, type CategoryOption } from '@/api/staff'
+import { createStaffArticle, createStaffDraft, fetchCategories, fetchManageableArticleDetail, submitStaffArticle, updateStaffArticle, type CategoryOption } from '@/api/staff'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -148,6 +155,7 @@ const loadError = ref('')
 const formError = ref('')
 const successMessage = ref('')
 const submitting = ref(false)
+const savingDraft = ref(false)
 const pageLoading = ref(false)
 const rejectionReason = ref('')
 const editingArticleStatus = ref<string | null>(null)
@@ -266,6 +274,7 @@ async function handlePublish() {
       })
       editingArticleStatus.value = updatedArticle.status
       rejectionReason.value = updatedArticle.rejectionReason ?? ''
+      await submitStaffArticle(articleId.value)
       await router.push({ path: '/admin/posts/manage', query: { updated: '1' } })
       return
     } else {
@@ -285,6 +294,52 @@ async function handlePublish() {
     formError.value = err?.response?.data?.message ?? 'Không thể gửi bài viết. Vui lòng thử lại.'
   } finally {
     submitting.value = false
+  }
+}
+
+async function handleSaveDraft() {
+  formError.value = ''
+  successMessage.value = ''
+
+  if (!auth.userId) {
+    formError.value = 'Không xác định được người dùng hiện tại từ phiên đăng nhập.'
+    return
+  }
+  if (!form.title.trim() || !form.categoryId || !form.coverImage.trim() || !form.excerpt.trim() || !form.content.trim()) {
+    formError.value = 'Vui lòng điền đầy đủ tiêu đề, danh mục, ảnh bìa, tóm tắt và nội dung trước khi lưu nháp.'
+    return
+  }
+  if (coverPreviewError.value) {
+    formError.value = coverPreviewError.value
+    return
+  }
+
+  savingDraft.value = true
+  try {
+    const payload = {
+      categoryId: form.categoryId,
+      coverImage: form.coverImage.trim(),
+      title: form.title.trim(),
+      sapo: form.excerpt.trim(),
+      content: form.content.trim(),
+      type: form.contentType,
+    }
+
+    if (isEditing.value && articleId.value) {
+      const updatedArticle = await updateStaffArticle(articleId.value, payload)
+      editingArticleStatus.value = updatedArticle.status
+      rejectionReason.value = updatedArticle.rejectionReason ?? ''
+      successMessage.value = updatedArticle.status === 'REJECTED'
+        ? 'Đã lưu phần chỉnh sửa. Bài chỉ được gửi lại khi bạn nhấn “Cập nhật và gửi lại duyệt”.'
+        : 'Đã lưu bản nháp.'
+    } else {
+      await createStaffDraft({ ...payload, authorId: auth.userId })
+      await router.push({ path: '/admin/posts/manage', query: { drafted: '1' } })
+    }
+  } catch (err: any) {
+    formError.value = err?.response?.data?.message ?? 'Không thể lưu bản nháp. Vui lòng thử lại.'
+  } finally {
+    savingDraft.value = false
   }
 }
 
